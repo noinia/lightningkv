@@ -1,0 +1,83 @@
+cabal-version:      2.4
+name:               lightningkv
+version:            0.1.0.0
+synopsis: Cache Oblivious key-value store
+
+description: Cache Oblivious key-value store
+
+-- A URL where users can report bugs.
+-- bug-reports:
+
+-- The license under which the package is released.
+license:            BSD3
+license-file:       LICENSE
+author:             Frank Staals
+maintainer:         frank@fstaals.net
+category:           Datastructures
+-- A copyright notice.
+-- copyright:
+extra-source-files: CHANGELOG.md
+
+
+source-repository head
+  type:     git
+  location: https://github.com/noinia/lightningkv
+
+
+library
+  ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+  hs-source-dirs: src
+  exposed-modules:
+
+  other-modules:
+
+  build-depends:
+                base ^>=4.14.1.0
+
+
+  default-language:    Haskell2010
+  default-extensions: TypeFamilies
+                    , GADTs
+                    , KindSignatures
+                    , DataKinds
+                    , TypeOperators
+                    , ConstraintKinds
+                    , PolyKinds
+                    , RankNTypes
+                    , TypeApplications
+                    , ScopedTypeVariables
+
+                    , PatternSynonyms
+                    , TupleSections
+                    , LambdaCase
+                    , ViewPatterns
+
+                    , StandaloneDeriving
+                    , GeneralizedNewtypeDeriving
+                    , FlexibleInstances
+                    , FlexibleContexts
+                    , MultiParamTypeClasses
+
+executable lightningkv
+    main-is:          Main.hs
+
+    -- Modules included in this executable, other than Main.
+    -- other-modules:
+
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+    build-depends:    base ^>=4.14.1.0
+    hs-source-dirs:   app
+    default-language: Haskell2010
+
+test-suite doctests
+  type:          exitcode-stdio-1.0
+  ghc-options:   -threaded
+  main-is:       doctests.hs
+  build-depends: base
+               , doctest             >= 0.8
+               , doctest-discover
+               , QuickCheck
+               , quickcheck-instances
+
+  default-language:    Haskell2010
