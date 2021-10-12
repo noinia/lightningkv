@@ -3,11 +3,17 @@ module Lightning.Prokob
   , create
   ) where
 
+
 import           Control.Exception (assert)
-import           Data.Vector (Vector)
+import           Control.Monad.ST.Strict
+import           Control.Monad.Trans.State.Strict ( StateT, evalStateT
+                                                  , get, put
+                                                  )
+import           Data.Semigroup
+
 import qualified Data.Vector as V
-import           Lightning.Tree
 import           Lightning.BinTree
+import           Lightning.Tree
 
 import qualified Data.Tree.View as TreeView
 import qualified Data.Tree as DataTree
@@ -24,37 +30,47 @@ type Height = Word
 
 
 -- pre: n=2^h input elements in xs
-layout      :: Height -> Vector b -> (Height, Tree VEB b b)
-layout = undefined
+layout      :: Height -> [x] -> Tree VEB (x, Max x) x
+layout h xs = fillWith xs $ create h
 
 -- layout 0 xs = let [x] = xs in (0, [Leaf x])
 -- layout h xs = undefined
 --   where
 --     m = h `div` 2
 
+type SST s cs = StateT cs (ST s)
 
-fillWith               :: ( Semigroup a
-                          , GV.Vector v (Node a b)
-                          , GV.Vector v (Node k c)
-                          )
-                       => (d -> k)
-                       -> (b -> c -> d)
-                       -> (k -> a -> k -> k)
-                       -> [c] -> Tree l v a b -> Tree l v k d
-fillWith f leaf node xs t@(Tree v) = biTraverseTree node' leaf' t
+
+printTestTree h = printTree $ layout h [0..pow2 h]
+
+-- just make a bst
+
+-- store maximum of the subtrees as well
+fillWith :: [x] -> Tree l a b -> Tree l (x,Max x) x
+fillWith = fillWith' (\(_,Max lM) _ (_,rM) -> (lM,rM))
+                     (\x _ -> x)
+                     (\x -> (x,Max x))
+
+
+fillWith'                  :: forall a b c d x l.
+                             (c -> a -> c -> c) -- ^ node combinator
+                          -> (x -> b -> d)      -- ^ leaf builder
+                          -> (d -> c)           -- ^ lift a leaf into c
+                          -> [x]
+                          -> Tree l a b -> Tree l c d
+fillWith' node leaf f xs t = runST (flip evalStateT xs $ biTraverseTreeM node' leaf' lift' t)
   where
-    n = GV.length v
+    node'         :: Index -> c -> a -> c -> SST s [x] c
+    node' _ l a r = pure $ node l a r
 
-    leaf' a =
-    node
+    leaf'     :: Index -> b -> SST s [x] d
+    leaf' _ b = get >>= \case
+                  []      -> error "fillWith: too few elements"
+                  (x:xs') -> do put xs'
+                                pure $ leaf x b
 
-
-
-  Tree . V.fromListN n $ go xs (GV.toList v)
-  where
-
-    go [] ts = undefined
-    go ()
+    lift' :: d -> SST s [x] c
+    lift' = pure . f
 
 
 
