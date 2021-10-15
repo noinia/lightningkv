@@ -7,12 +7,13 @@ module Lightning.Map
   , lookup
   ) where
 
-import           Data.Coerce (coerce)
+
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as UV
-import           Lightning.Prokob
+import qualified Lightning.Prokob as Prokob
 import           Lightning.Tree (GTree, Layout(..))
 import           Prelude hiding (lookup)
+import qualified Lightning.Prokob as Prokob
 
 --------------------------------------------------------------------------------
 
@@ -41,8 +42,8 @@ type Map = GMap UV.Vector V.Vector
 
 
 
-fromAscList :: [(k,v)] -> Map k v
-fromAscList = undefined
+fromAscList    :: [(k,v)] -> Map k v
+fromAscList xs = Map (Prokob.fromAscListN (length xs) $ map fst xs)
 
 
 insert :: (Ord k, Enum k) => k -> v -> Map k v -> Map k v
