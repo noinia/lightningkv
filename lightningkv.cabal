@@ -78,6 +78,7 @@ executable lightningkv
     -- other-extensions:
     build-depends: base                    ^>= 4.14.1.0
                  , lightningkv
+                 , random                  ^>= 1.2.0
 
     hs-source-dirs:   app
     default-language: Haskell2010

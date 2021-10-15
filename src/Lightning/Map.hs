@@ -100,16 +100,21 @@ fromAscListN n xs = let (ks,vs) = first (zipWith (flip (mkKeyValue @k @v)) [0..]
                            (V.fromList vs)
 
 
+--------------------------------------------------------------------------------
+-- * Insertions
+
 insert :: Enum k => k -> v -> Map k v -> Map k v
 insert = undefined
 
 
 --------------------------------------------------------------------------------
+-- * Deletions
 
 delete :: Enum k => k -> Map k v -> Map k v
 delete = undefined
 
 --------------------------------------------------------------------------------
+-- * Queries
 
 -- | Lookup a key in the map
 lookup                                     :: Enum k => k -> Map k v -> Maybe v
@@ -121,16 +126,3 @@ lookup (mkKey -> q) (Map t vs) | k == q    = Just $ vs V.! i
 -- | Go right in our search
 goRight         :: Enum k => Key k -> (Key k, b) -> Bool
 goRight q (k,_) = q > k
-
-
--- --------------------------------------------------------------------------------
-
--- fromAscList :: [(k,v)] -> Map k v
--- fromAscList = undefined
-
-
--- insert :: (Ord k, Enum k) => k -> v -> Map k v -> Map k v
--- insert = undefined
-
--- lookup :: (Ord k, Enum k) => k -> Map k v -> Maybe v
--- lookup = undefined
