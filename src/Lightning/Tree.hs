@@ -14,6 +14,7 @@ module Lightning.Tree
 
   , biTraverseTreeM
 
+  , leaves
   , searchLeafR
 
   , Index
@@ -35,7 +36,7 @@ import qualified Data.Vector.Generic.Mutable as GVM
 import           GHC.Generics
 -- import           Data.Store
 -- import           Data.Store.TH
-import           Lightning.BinTree
+import           Lightning.BinTree(BinTree(..))
 -- -- import           Foreign.Storable
 -- -- import           Foreign.Ptr
 
@@ -296,6 +297,14 @@ biTraverseTreeM node leaf liftCD t = do w <- GVM.new (fromIntegral n)
 --     node' w i l k r = GVM.write w (fromIntegral i) $ node i l k r
 
 --------------------------------------------------------------------------------
+-- * Traversals
+
+-- | Get the values in the leaves in ascending order.
+leaves          :: (GV.Vector v (Node a b), GV.Vector v b) => GTree l v a b -> v b
+leaves (Tree t) = GV.mapMaybe (\case
+                                  Leaf x -> Just x
+                                  _      -> Nothing) t
+
 
 --------------------------------------------------------------------------------
 -- * Querying
