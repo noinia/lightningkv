@@ -20,7 +20,7 @@ module Thunder.Tree
   , Node
   ) where
 
--- -- import           Control.DeepSeq
+import           Control.DeepSeq
 import           Control.Monad.Primitive (PrimMonad)
 import           Data.Bifoldable
 import           Data.Bifunctor
@@ -29,7 +29,7 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Generic.Mutable as GVM
 -- -- import           Data.Word (Word8)
--- -- import           GHC.Generics
+import           GHC.Generics
 -- import           Data.Store
 -- import           Data.Store.TH
 import           Thunder.BinTree(BinTree(..))
@@ -48,9 +48,12 @@ data Layout = VEB
 
 
 newtype GTree (l :: Layout) v a b = Tree (v (Node a b))
+  deriving (Generic)
 
 deriving instance (Show a, Show b, Show (v (Node a b))) => Show (GTree l v a b)
 deriving instance (Eq a, Eq b, Eq (v (Node a b)))       => Eq (GTree l v a b)
+
+instance NFData (v (Node a b)) => NFData (GTree l v a b)
 
 
 toBinTree :: GV.Vector v (Node a b) => GTree l v a b -> BinTree a b

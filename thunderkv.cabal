@@ -32,7 +32,7 @@ library
                    Thunder.KeyValue
 
   build-depends:
-                     base                    ^>=4.14.1.0
+                     base                    ^>= 4.14.1.0
                    , bifunctors              ^>= 5.5
                    , containers              ^>= 0.6
                    , deepseq                 ^>= 1.4.4.0
@@ -92,10 +92,51 @@ test-suite doctests
   type:          exitcode-stdio-1.0
   ghc-options:   -threaded
   main-is:       doctests.hs
-  build-depends: base
-               , doctest             >= 0.8
+  build-depends: base                     ^>= 4.14.1.0
+               , doctest                  ^>= 0.8
                , doctest-discover
                , QuickCheck
                , quickcheck-instances
 
   default-language:    Haskell2010
+
+
+benchmark bench
+
+  hs-source-dirs: bench
+
+  main-is: Static.hs
+  type: exitcode-stdio-1.0
+
+  other-modules: SortedVec
+  build-depends:
+                base                    ^>= 4.14.1.0
+              , thunderkv
+              , criterion               ^>= 1.5.9
+              -- , tasty-bench             >= 0.2
+              , random                  ^>= 1.2
+              , vector
+              , deepseq
+              , mtl
+              , containers              ^>= 0.6
+              -- , hgeometry-combinatorial
+
+  ghc-options: -Wall -O2 -rtsopts -fno-warn-unticked-promoted-constructors
+
+  default-language: Haskell2010
+  default-extensions: LambdaCase
+                    , FlexibleContexts
+                    , KindSignatures
+                    , GeneralizedNewtypeDeriving
+                    , StandaloneDeriving
+                    , DeriveFunctor
+                    , DeriveFoldable
+                    , DeriveTraversable
+                    , ViewPatterns
+                    , PatternSynonyms
+                    , TupleSections
+                    , RankNTypes
+                    , ConstraintKinds
+                    , DataKinds
+                    , FlexibleInstances
+                    , DeriveGeneric

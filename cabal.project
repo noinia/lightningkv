@@ -1,5 +1,6 @@
 write-ghc-environment-files: always
-tests: true
+tests: false
+benchmarks: true
 packages: *
 package derive-storable
     flags: +sumtypes

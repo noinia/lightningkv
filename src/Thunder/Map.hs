@@ -15,9 +15,11 @@ module Thunder.Map
 
 
 import           Control.Arrow (first)
+import           Control.DeepSeq
 import qualified Data.Vector as V
-import qualified Data.Vector.Storable as SV
 import qualified Data.Vector.Generic as GV
+import qualified Data.Vector.Storable as SV
+import           GHC.Generics
 -- -- import qualified Data.Vector.Unboxed as UV
 import qualified Thunder.Prokob as Prokob
 import           Thunder.Tree (GTree, Layout(..), searchLeafR, Node, leaves)
@@ -30,6 +32,7 @@ import           Prelude hiding (lookup)
 -- | VEB Tree based map.
 data GMap f g k v = Map (GTree VEB f (Key k) (KeyValue k v))
                         (g v)
+                    deriving (Generic)
 -- FIXME: Map is static for now.
 
 instance (Show k, Enum k, Show v
@@ -39,6 +42,10 @@ instance (Show k, Enum k, Show v
          ) => Show (GMap f g k v) where
   showsPrec d m  = showParen (d > 10) $
     showString "fromList " . shows (toAscList m)
+
+instance ( NFData (f (Node (Key k) (KeyValue k v)))
+         , NFData (g v)
+         ) => NFData (GMap f g k v)
 
 -- instance Functor g => Functor (GMap f g k) where
 --   fmap f (Map t v) = Map (coerce' f t) (fmap f v)

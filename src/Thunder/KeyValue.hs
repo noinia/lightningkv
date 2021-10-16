@@ -8,6 +8,7 @@ module Thunder.KeyValue
   , KeyValue(..), mkKeyValue
   ) where
 
+import Control.DeepSeq
 import Data.Vector.Primitive (Prim)
 import Foreign.Storable
 import Foreign.Storable.Generic
@@ -18,7 +19,7 @@ import Prelude hiding (lookup)
 
 -- | Key representing something of type k
 newtype Key k = Key Int
-              deriving (Show,Eq,Ord,Storable,Prim) via Int
+              deriving (Show,Eq,Ord,Storable,Prim,NFData) via Int
 
 
 -- | Make a Key
@@ -39,7 +40,7 @@ unKey (Key k) = toEnum k
 --------------------------------------------------------------------------------
 
 -- | Index that should return s.t. of type v
-newtype Index v = Index Int deriving (Show,Eq,Ord,Storable,Prim) via Int
+newtype Index v = Index Int deriving (Show,Eq,Ord,Storable,Prim,NFData) via Int
 
 --------------------------------------------------------------------------------
 
@@ -47,11 +48,14 @@ newtype Index v = Index Int deriving (Show,Eq,Ord,Storable,Prim) via Int
 data KeyValue k v = KeyValue { getKey        :: {-# UNPACK #-} !(Key k)
                              , getValueIndex :: {-# UNPACK #-} !(Index v)
                              }
-                  deriving stock (Show,Generic)
+                  deriving stock (Show,Generic,Generic1)
                   deriving anyclass (GStorable)
 
 mkKeyValue     :: Enum k => k -> Int -> KeyValue k v
 mkKeyValue k i = KeyValue (mkKey k) (Index i)
+
+instance NFData (KeyValue k v)
+-- instance NFData1 (KeyValue k)
 
 instance Eq (KeyValue k v) where
   -- | comparison based on key's only

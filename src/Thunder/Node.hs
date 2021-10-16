@@ -96,7 +96,7 @@ data Node a b = Leaf {-# UNPACK #-} !b
 --     instance (Store a, Store b) => Deriving (Store (Node a b))
 --     |]))
 
-instance (NFData a, NFData b) => NFData (Node a b) where rnf = rnf1
+instance (NFData a, NFData b) => NFData (Node a b)
 instance NFData a => NFData1 (Node a)
 
 instance Bifunctor Node where
