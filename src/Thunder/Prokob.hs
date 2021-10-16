@@ -42,14 +42,21 @@ type Size = Int
 -- elements, constructs a BST in VEB layout.
 --
 -- pre: n=2^h for some h.
-fromAscListNWith     :: (b -> a) -> Size -> [b] -> Tree VEB a b
+fromAscListNWith     ::
+                     ( GV.Vector v (Node a b)
+                     , GV.Vector v (Node (WithMax a) b)
+                     )
+                     => (b -> a) -> Size -> [b] -> GTree VEB v a b
 fromAscListNWith f n = layoutWith f (lg n)
 
 -- | Given a length n and a list xs of n elements, constructs a BST in
 -- VEB layout.
 --
 -- pre: n=2^h for some h.
-fromAscListN :: Size -> [x] -> Tree VEB x x
+fromAscListN :: ( GV.Vector v (Node a a)
+                , GV.Vector v (Node (WithMax a) a)
+                )
+             => Size -> [a] -> GTree VEB v a a
 fromAscListN = fromAscListNWith id
 
 -- | Given the leaf to value function, a height h, and a list of input
@@ -63,7 +70,7 @@ layoutWith        :: forall v a b.
                   => (b -> a) -> Height -> [b] -> GTree VEB v a b
 layoutWith f h xs = bimapTree (\(WithMax x _) -> x) id
                   . fillWith f xs
-                  $ create @SV.Vector h -- FIXME: don't use a boxed vector ere.
+                  $ create @SV.Vector h
 
 -- | Lay out 2^h values in a BST in VEB layout.
 layout :: Height -> [b] -> Tree VEB b b

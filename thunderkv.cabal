@@ -29,6 +29,7 @@ library
                    Thunder.Map
 
   other-modules:   Thunder.Node
+                   Thunder.KeyValue
 
   build-depends:
                      base                    ^>=4.14.1.0
