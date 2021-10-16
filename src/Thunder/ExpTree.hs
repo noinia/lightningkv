@@ -1,7 +1,7 @@
-module Lightning.ExpTree
+module Thunder.ExpTree
   where
 
-import Lightning.Tree
+import Thunder.Tree
 
 --------------------------------------------------------------------------------
 

@@ -1,4 +1,4 @@
-module Lightning.BinTree
+module Thunder.BinTree
   ( BinTree(..)
   , foldBinTree
   , leaves, height

@@ -4,8 +4,8 @@ module Main where
 import System.Environment(getArgs)
 import System.Random
 import Control.Monad(replicateM)
-import Lightning.Prokob
-import qualified Lightning.Map as Map
+import Thunder.Prokob
+import qualified Thunder.Map as Map
 import Data.List(scanl1)
 
 --------------------------------------------------------------------------------

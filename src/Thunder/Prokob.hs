@@ -1,4 +1,4 @@
-module Lightning.Prokob
+module Thunder.Prokob
   ( fromAscListNWith, fromAscListN
   , layoutWith, layout
   , fillWith, fillWith'
@@ -6,6 +6,9 @@ module Lightning.Prokob
 
   , Height, Size
   , lg, pow2, size, numLeaves
+
+
+  , printTree
   ) where
 
 
@@ -17,9 +20,13 @@ import           Control.Monad.Trans.State.Strict ( StateT, evalStateT
 import           Data.Semigroup
 import           Math.NumberTheory.Logarithms(intLog2')
 
+
 import qualified Data.Vector as V
-import           Lightning.BinTree
-import           Lightning.Tree
+import qualified Data.Vector.Generic as GV
+-- import qualified Data.Vector.Storable as SV
+import           Thunder.BinTree
+import           Thunder.Tree
+import           Thunder.Node
 
 import qualified Data.Tree.View as TreeView
 import qualified Data.Tree as DataTree
@@ -35,25 +42,31 @@ type Size = Int
 -- elements, constructs a BST in VEB layout.
 --
 -- pre: n=2^h for some h.
-fromAscListNWith     :: (b -> a) -> Size -> [b] -> Tree VEB (a, Max a) b
+fromAscListNWith     :: (b -> a) -> Size -> [b] -> Tree VEB a b
 fromAscListNWith f n = layoutWith f (lg n)
 
 -- | Given a length n and a list xs of n elements, constructs a BST in
 -- VEB layout.
 --
 -- pre: n=2^h for some h.
-fromAscListN :: Size -> [x] -> Tree VEB (x, Max x) x
+fromAscListN :: Size -> [x] -> Tree VEB x x
 fromAscListN = fromAscListNWith id
 
 -- | Given the leaf to value function, a height h, and a list of input
 -- elements xs, constructs a BST in VEB layout of the given height.
 --
 -- pre: length xs = 2^h
-layoutWith        :: (b -> a) -> Height -> [b] -> Tree VEB (a, Max a) b
-layoutWith f h xs = fillWith f xs $ create h
+layoutWith        :: forall v a b.
+                     ( GV.Vector v (Node a b)
+                     , GV.Vector v (Node (WithMax a) b)
+                     )
+                  => (b -> a) -> Height -> [b] -> GTree VEB v a b
+layoutWith f h xs = bimapTree (\(WithMax x _) -> x) id
+                  . fillWith f xs
+                  $ create @V.Vector h -- FIXME: don't use a boxed vector ere.
 
 -- | Lay out 2^h values in a BST in VEB layout.
-layout :: Height -> [b] -> Tree VEB (b, Max b) b
+layout :: Height -> [b] -> Tree VEB b b
 layout = layoutWith id
 
 --------------------------------------------------------------------------------
@@ -65,22 +78,34 @@ layout = layoutWith id
 --
 -- This function is useful when the input tree has the right
 -- structure/memory layout.
-fillWith   :: (d -> c) -> [d] -> Tree l a b -> Tree l (c,Max c) d
-fillWith f = fillWith' (\(_,Max lM) _ (_,rM) -> (lM,rM))
+fillWith   :: ( GV.Vector v (Node a b)
+              , GV.Vector w (Node (WithMax c) d)
+              )
+           => (d -> c) -> [d] -> GTree l v a b -> GTree l w (WithMax c) d
+fillWith f = fillWith' (\(WithMax _ (Max lM)) _ (WithMax _ rM) -> WithMax lM rM)
                        (\d _ -> d)
-                       (\d -> let c = f d in (c,Max c))
+                       (\d -> let c = f d in WithMax c (Max c))
+
+data WithMax c = WithMax {-# UNBOX #-} !c
+                         {-# UNBOX #-} !(Max c)
+               deriving (Show,Eq)
+-- TODO: Storable instance
+
 
 type SST s cs = StateT cs (ST s)
 
 -- | More general version of fillWith that allows us to specify how to
 -- construct a node, how to create a leaf, and how to lift a leaf into
 -- a c.
-fillWith'                  :: forall a b c d x l.
-                             (c -> a -> c -> c) -- ^ node combinator
+fillWith'                  :: forall v w a b c d x l.
+                           ( GV.Vector v (Node a b)
+                           , GV.Vector w (Node c d)
+                           )
+                          => (c -> a -> c -> c) -- ^ node combinator
                           -> (x -> b -> d)      -- ^ leaf builder
                           -> (d -> c)           -- ^ lift a leaf into c
                           -> [x]
-                          -> Tree l a b -> Tree l c d
+                          -> GTree l v a b -> GTree l w c d
 fillWith' node leaf f xs t = runST (flip evalStateT xs $ biTraverseTreeM node' leaf' lift' t)
   where
     node'         :: Index -> c -> a -> c -> SST s [x] c
@@ -98,8 +123,8 @@ fillWith' node leaf f xs t = runST (flip evalStateT xs $ biTraverseTreeM node' l
 --------------------------------------------------------------------------------
 
 -- | Create a complete tree in VEB layout of height h
-create   :: Height -> Tree VEB () ()
-create h = Tree . V.fromListN n . create' $ h
+create   :: GV.Vector v (Node () ()) => Height -> GTree VEB v () ()
+create h = Tree . GV.fromListN n . create' $ h
   where
     n = fromIntegral $ size h
 
@@ -187,12 +212,15 @@ numLeaves = pow2
 
 --------------------------------------------------------------------------------
 
+testTree :: Height -> Tree 'VEB Word Word
 testTree h = layout h [0..(pow2 h-1)]
 
 
+printTestTree :: Height -> IO ()
 printTestTree h = printTree $ testTree h
 
 
+printTreeOf :: Height -> IO ()
 printTreeOf = printTree . create
 
 printTree :: (Show a, Show b) => Tree l a b -> IO ()

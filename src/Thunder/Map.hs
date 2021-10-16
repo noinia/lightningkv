@@ -1,6 +1,6 @@
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module Lightning.Map
+module Thunder.Map
   ( Map
   , fromAscList, fromAscListN
 
@@ -19,8 +19,8 @@ import qualified Data.Vector as V
 import Data.Vector.Primitive(Prim(..))
 -- -- import qualified Data.Vector.Unboxed as UV
 import           Foreign.Storable
-import qualified Lightning.Prokob as Prokob
-import           Lightning.Tree (GTree, Layout(..), searchLeafR)
+import qualified Thunder.Prokob as Prokob
+import           Thunder.Tree (GTree, Layout(..), searchLeafR)
 import           Prelude hiding (lookup)
 -- -- import qualified Data.Vector.Storable.Mutable as UMV
 
@@ -66,7 +66,7 @@ instance Ord (KeyValue k v) where
 --------------------------------------------------------------------------------
 
 -- | VEB Tree based map.
-data GMap f g k v = Map (GTree VEB f (Key k, Max (Key k)) (KeyValue k v))
+data GMap f g k v = Map (GTree VEB f (Key k) (KeyValue k v))
                         (g v)
 -- FIXME: Map is static for now.
 
@@ -121,8 +121,4 @@ lookup                                     :: Enum k => k -> Map k v -> Maybe v
 lookup (mkKey -> q) (Map t vs) | k == q    = Just $ vs V.! i
                                | otherwise = Nothing
   where
-    (KeyValue k (Index i)) = searchLeafR (goRight q) t
-
--- | Go right in our search
-goRight         :: Enum k => Key k -> (Key k, b) -> Bool
-goRight q (k,_) = q > k
+    (KeyValue k (Index i)) = searchLeafR (q >) t
