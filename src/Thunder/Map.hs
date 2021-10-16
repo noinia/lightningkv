@@ -22,7 +22,7 @@ import qualified Data.Vector.Storable as SV
 import           GHC.Generics
 -- -- import qualified Data.Vector.Unboxed as UV
 import qualified Thunder.Prokob as Prokob
-import           Thunder.Tree (GTree, Layout(..), searchLeafR, Node, leaves)
+import           Thunder.Tree
 import           Thunder.KeyValue
 import           Thunder.WithInfty
 import           Prelude hiding (lookup)
@@ -91,7 +91,7 @@ fromAscList xs = fromAscListN (length xs) xs
 -- | Given a length n = 2^h and a list of key value pairs xs, builds a Map.
 --
 -- pre: length xs == 2^h for some h.
-fromAscListN      :: Enum k => Prokob.Size -> [(k,v)] -> Map k v
+fromAscListN      :: Enum k => Size -> [(k,v)] -> Map k v
 fromAscListN n xs = let (ks,vs) = first (zipWith (flip mkKeyValue) [0..]) $ unzip xs
                     in Map (Prokob.fromAscListNWith getKey n ks)
                            (V.fromList vs)

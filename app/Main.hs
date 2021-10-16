@@ -1,12 +1,13 @@
 {-# LANGUAGE  TupleSections #-}
 module Main where
 
-import System.Environment(getArgs)
-import System.Random
-import Control.Monad(replicateM)
-import Thunder.Prokob
+import           Control.Monad (replicateM)
+import           Data.List (scanl1)
+import           System.Environment (getArgs)
+import           System.Random
 import qualified Thunder.Map as Map
-import Data.List(scanl1)
+import           Thunder.Prokob
+import           Thunder.Tree
 
 --------------------------------------------------------------------------------
 

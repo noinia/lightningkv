@@ -1,11 +1,15 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# OPTIONS_GHC -fplugin=Foreign.Storable.Generic.Plugin #-}
+{-# OPTIONS_GHC -fplugin-opt=Foreign.Storable.Generic.Plugin:-v2 #-}
 module Thunder.Tree
   ( GTree(..) -- TODO: don't export constructor
   , Tree
   , Layout(..)
 
   , toBinTree
+  , numLeaves, numNodes
 
   , biTraverseTree
   , bifoldTree
@@ -16,23 +20,42 @@ module Thunder.Tree
   , leaves
   , searchLeafR
 
+
   , Index
   , Node
+  , WithMax
+
+  , Height, Size
+
+
+  , reFillWith
+  , fillWith, fillWith'
+
+
+  , printTree
   ) where
 
 import           Control.DeepSeq
 import           Control.Monad.Primitive (PrimMonad)
+import           Control.Monad.ST.Strict
+import           Control.Monad.Trans.State.Strict ( StateT, evalStateT
+                                                  , get, put
+                                                  )
 import           Data.Bifoldable
 import           Data.Bifunctor
 import           Data.Functor.Identity
+import qualified Data.Tree as DataTree
+import qualified Data.Tree.View as TreeView
 import qualified Data.Vector as V
 import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Generic.Mutable as GVM
--- -- import           Data.Word (Word8)
+import           Foreign.Storable.Generic
 import           GHC.Generics
+-- -- import           Data.Word (Word8)
+
 -- import           Data.Store
 -- import           Data.Store.TH
-import           Thunder.BinTree(BinTree(..))
+import           Thunder.BinTree (BinTree(..))
 import           Thunder.Node
 -- -- import           Foreign.Storable
 -- -- import           Foreign.Ptr
@@ -43,19 +66,30 @@ import           Thunder.Node
 data Layout = VEB
             | InOrder
 
+type Height = Int
+
+type Size = Int
 
 --------------------------------------------------------------------------------
 
-
+-- | A Tree whose leaves store values of type b, whose internal nodes
+-- store values of type a. The tree is stored in an Vector v using
+-- layout l.
 newtype GTree (l :: Layout) v a b = Tree (v (Node a b))
   deriving (Generic)
+
+type Tree l = GTree l V.Vector
 
 deriving instance (Show a, Show b, Show (v (Node a b))) => Show (GTree l v a b)
 deriving instance (Eq a, Eq b, Eq (v (Node a b)))       => Eq (GTree l v a b)
 
 instance NFData (v (Node a b)) => NFData (GTree l v a b)
 
+instance Functor v => Bifunctor (GTree l v) where
+  bimap f g (Tree v) = Tree $ fmap (bimap f g) v
 
+
+-- | Convert into a BinTree
 toBinTree :: GV.Vector v (Node a b) => GTree l v a b -> BinTree a b
 toBinTree (Tree t) = go 0
   where
@@ -63,15 +97,14 @@ toBinTree (Tree t) = go 0
              Leaf x     -> BinLeaf x
              Node l k r -> BinNode (go l) k (go r)
 
-
-type Tree l = GTree l V.Vector
-
-
+-- | Get the number of nodes in the tree
 numNodes          :: GV.Vector v (Node a b) => GTree l v a b -> Int
 numNodes (Tree v) = GV.length v
 
-instance Functor v => Bifunctor (GTree l v) where
-  bimap f g (Tree v) = Tree $ fmap (bimap f g) v
+-- | get the capacity, i.e. the number of leaves of the tree
+numLeaves   :: GV.Vector v (Node a b) => GTree l v a b -> Int
+numLeaves t = (numNodes t + 1) `div` 2
+
 
 -- | bimap implementation that uses vector's map rather than
 -- fmap. This avoids a functor v constraint, which storable vectors do
@@ -212,7 +245,6 @@ leaves (Tree t) = GV.mapMaybe (\case
                                   Leaf x -> Just x
                                   _      -> Nothing) t
 
-
 --------------------------------------------------------------------------------
 -- * Querying
 
@@ -225,9 +257,6 @@ searchLeafR goRight (Tree t) = go 0
              Node li k ri -> if goRight k then go ri else go li
 
 
--- -- | Lookup an the value of key k
--- lookup   :: Ord k => k -> Tree (Maybe k) (Maybe (k,v)) -> Maybe v
--- lookup q = fmap snd . lookup' (== Just q)
 
 -- -- | Find the strict successor of k, if it exists
 -- lookupGT   :: Ord k => k -> Tree (Maybe k) (Maybe (k,v)) -> Maybe (k,v)
@@ -252,3 +281,77 @@ searchLeafR goRight (Tree t) = go 0
 -- lookup'     :: (Maybe k -> Bool) -> Tree (Maybe k) (Maybe (k,v)) -> Maybe (k,v)
 -- lookup' p t = let lf = searchLeafR p t
 --               in if p (fst <$> lf) then lf else Nothing
+
+
+--------------------------------------------------------------------------------
+-- * Filling Binary Search Trees
+
+-- | Given a leaf to value function, an ascending list of elements xs,
+-- and a tree t, create a BST by overwriting all values in the BST.
+--
+-- pre: length xs >= capacity t
+reFillWith      :: ( GV.Vector v (Node a b)
+                   , GV.Vector w (Node (WithMax c) d)
+                   , GV.Vector w (Node c d)
+                   )
+                => (d -> c) -> [d] -> GTree l v a b -> GTree l w c d
+reFillWith f xs = bimapTree (\(WithMax x _) -> x) id . fillWith f xs
+
+-- | Given a leaf to key function and a list of leaf values,
+-- "overwrite" the values in the input tree by those in the input list
+-- (in increasing order). Note that this actually constructs a new
+-- array in memory sotring this tree.
+--
+-- This function is useful when the input tree has the right
+-- structure/memory layout.
+fillWith   :: ( GV.Vector v (Node a b)
+              , GV.Vector w (Node (WithMax c) d)
+              )
+           => (d -> c) -> [d] -> GTree l v a b -> GTree l w (WithMax c) d
+fillWith f = fillWith' (\(WithMax _ lM) _ (WithMax _ rM) -> WithMax lM rM)
+                       (\d _ -> d)
+                       (\d -> let c = f d in WithMax c c)
+
+data WithMax c = WithMax {-# UNBOX #-} !c
+                         {-# UNBOX #-} !c -- the maximum
+               deriving stock (Show,Eq,Ord,Generic)
+               deriving anyclass (GStorable)
+
+type SST s cs = StateT cs (ST s)
+
+-- | More general version of fillWith that allows us to specify how to
+-- construct a node, how to create a leaf, and how to lift a leaf into
+-- a c.
+fillWith'                  :: forall v w a b c d x l.
+                           ( GV.Vector v (Node a b)
+                           , GV.Vector w (Node c d)
+                           )
+                          => (c -> a -> c -> c) -- ^ node combinator
+                          -> (x -> b -> d)      -- ^ leaf builder
+                          -> (d -> c)           -- ^ lift a leaf into c
+                          -> [x]
+                          -> GTree l v a b -> GTree l w c d
+fillWith' node leaf f xs t = runST (flip evalStateT xs $ biTraverseTreeM node' leaf' lift' t)
+  where
+    node'         :: Index -> c -> a -> c -> SST s [x] c
+    node' _ l a r = pure $ node l a r
+
+    leaf'     :: Index -> b -> SST s [x] d
+    leaf' _ b = get >>= \case
+                  []      -> error "fillWith: too few elements"
+                  (x:xs') -> do put xs'
+                                pure $ leaf x b
+
+    lift' :: d -> SST s [x] c
+    lift' = pure . f
+
+--------------------------------------------------------------------------------
+-- * Debugging
+
+printTree :: (Show a, Show b) => Tree l a b -> IO ()
+printTree = TreeView.drawTree . convert . toBinTree
+  where
+    convert (BinLeaf x) = DataTree.Node (show x) []
+    convert (BinNode l k r) = DataTree.Node (show k) [convert l, convert r]
+
+--------------------------------------------------------------------------------

@@ -7,37 +7,20 @@ module Thunder.Prokob
   , fillWith, fillWith'
   , create
 
-  , Height, Size
-  , lg, pow2, size, numLeaves
+  , lg, pow2, size, numLeavesFromHeight
 
-
-  , printTree
+  , padToNextPower
   ) where
 
-
-
 import           Control.Exception (assert)
-import           Control.Monad.ST.Strict
-import           Control.Monad.Trans.State.Strict ( StateT, evalStateT
-                                                  , get, put
-                                                  )
-import qualified Data.Tree as DataTree
-import qualified Data.Tree.View as TreeView
 import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Storable as SV
-import           Foreign.Storable.Generic
-import           GHC.Generics
 import           Math.NumberTheory.Logarithms (intLog2')
-import           Thunder.BinTree
 import           Thunder.Node
 import           Thunder.Tree
 import           Thunder.WithInfty
 
 --------------------------------------------------------------------------------
-
-type Height = Int
-
-type Size = Int
 
 --------------------------------------------------------------------------------
 
@@ -58,16 +41,6 @@ fromAscListN :: ( GV.Vector v (Node (WithInfty a) (WithInfty a))
              => Size -> [a] -> GTree VEB v (WithInfty a) (WithInfty a)
 fromAscListN = fromAscListNWith id
 
-
--- | pad the length to be a power of two
-padToNextPower        :: Height -> Size -> [a] -> (Height, [WithInfty a])
-padToNextPower h n xs | m == 0    = (h, xs')
-                      | otherwise = (h+1, xs' <> replicate m Infty)
-  where
-    m   = n - pow2 h
-    xs' = map Val xs
-
-
 --------------------------------------------------------------------------------
 
 -- | Given the leaf to value function, a height h, and a list of input
@@ -79,63 +52,11 @@ layoutWith        :: forall v a b.
                      , GV.Vector v (Node (WithMax a) b)
                      )
                   => (b -> a) -> Height -> [b] -> GTree VEB v a b
-layoutWith f h xs = bimapTree (\(WithMax x _) -> x) id
-                  . fillWith f xs
-                  $ create @SV.Vector h
+layoutWith f h xs = reFillWith f xs $ create @SV.Vector h
 
 -- | Lay out 2^h values in a BST in VEB layout.
 layout :: Height -> [b] -> Tree VEB b b
 layout = layoutWith id
-
---------------------------------------------------------------------------------
-
--- | Given a leaf to key function and a list of leaf values,
--- "overwrite" the values in the input tree by those in the input list
--- (in increasing order). Note that this actually constructs a new
--- array in memory sotring this tree.
---
--- This function is useful when the input tree has the right
--- structure/memory layout.
-fillWith   :: ( GV.Vector v (Node a b)
-              , GV.Vector w (Node (WithMax c) d)
-              )
-           => (d -> c) -> [d] -> GTree l v a b -> GTree l w (WithMax c) d
-fillWith f = fillWith' (\(WithMax _ lM) _ (WithMax _ rM) -> WithMax lM rM)
-                       (\d _ -> d)
-                       (\d -> let c = f d in WithMax c c)
-
-data WithMax c = WithMax {-# UNBOX #-} !c
-                         {-# UNBOX #-} !c -- the maximum
-               deriving stock (Show,Eq,Ord,Generic)
-               deriving anyclass (GStorable)
-
-type SST s cs = StateT cs (ST s)
-
--- | More general version of fillWith that allows us to specify how to
--- construct a node, how to create a leaf, and how to lift a leaf into
--- a c.
-fillWith'                  :: forall v w a b c d x l.
-                           ( GV.Vector v (Node a b)
-                           , GV.Vector w (Node c d)
-                           )
-                          => (c -> a -> c -> c) -- ^ node combinator
-                          -> (x -> b -> d)      -- ^ leaf builder
-                          -> (d -> c)           -- ^ lift a leaf into c
-                          -> [x]
-                          -> GTree l v a b -> GTree l w c d
-fillWith' node leaf f xs t = runST (flip evalStateT xs $ biTraverseTreeM node' leaf' lift' t)
-  where
-    node'         :: Index -> c -> a -> c -> SST s [x] c
-    node' _ l a r = pure $ node l a r
-
-    leaf'     :: Index -> b -> SST s [x] d
-    leaf' _ b = get >>= \case
-                  []      -> error "fillWith: too few elements"
-                  (x:xs') -> do put xs'
-                                pure $ leaf x b
-
-    lift' :: d -> SST s [x] c
-    lift' = pure . f
 
 --------------------------------------------------------------------------------
 
@@ -177,7 +98,7 @@ create'' top bottom th bh = top' <> concatMap subTreeNodes bottoms
     bottoms  = map (shiftBy sizeTop sizeBottom bottom) bottoms'
     bottoms' = [0..(numBottoms-1)]
 
-    numBottoms   = 2 * numLeaves th
+    numBottoms   = 2 * numLeavesFromHeight th
 
     sizeTop      = size th
     sizeBottom   = size bh
@@ -221,13 +142,23 @@ pow2 h = 2 ^ h
 
 ----------------------------------------
 
+-- | pad the length to be a power of two
+padToNextPower        :: Height -> Size -> [a] -> (Height, [WithInfty a])
+padToNextPower h n xs | m == 0    = (h, xs')
+                      | otherwise = (h+1, xs' <> replicate m Infty)
+  where
+    m   = n - pow2 h
+    xs' = map Val xs
+
+----------------------------------------
+
 -- | size of a complete tree of height h
 size :: Height -> Word
 size h = pow2 (h + 1) - 1
 
 -- | number of leaves of a complete tree of height h
-numLeaves :: Height -> Word
-numLeaves = pow2
+numLeavesFromHeight :: Height -> Word
+numLeavesFromHeight = pow2
 
 --------------------------------------------------------------------------------
 
@@ -237,16 +168,9 @@ testTree' h = layout h [0..(pow2 h-1)]
 testTree    :: [a] -> Tree VEB (WithInfty a) (WithInfty a)
 testTree xs = fromAscListN (length xs) xs
 
-
 printTestTree :: Height -> IO ()
 printTestTree h = printTree $ testTree' h
 
 
 printTreeOf :: Height -> IO ()
 printTreeOf = printTree . create
-
-printTree :: (Show a, Show b) => Tree l a b -> IO ()
-printTree = TreeView.drawTree . convert . toBinTree
-  where
-    convert (BinLeaf x) = DataTree.Node (show x) []
-    convert (BinNode l k r) = DataTree.Node (show k) [convert l, convert r]
