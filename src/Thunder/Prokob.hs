@@ -15,6 +15,7 @@ module Thunder.Prokob
   ) where
 
 
+
 import           Control.Exception (assert)
 import           Control.Monad.ST.Strict
 import           Control.Monad.Trans.State.Strict ( StateT, evalStateT
@@ -30,6 +31,8 @@ import           Math.NumberTheory.Logarithms (intLog2')
 import           Thunder.BinTree
 import           Thunder.Node
 import           Thunder.Tree
+import           Thunder.WithInfty
+
 --------------------------------------------------------------------------------
 
 type Height = Int
@@ -40,24 +43,32 @@ type Size = Int
 
 -- | Given the leaf to value function, a length n, and a list xs of n
 -- elements, constructs a BST in VEB layout.
---
--- pre: n=2^h for some h.
 fromAscListNWith     ::
-                     ( GV.Vector v (Node a b)
-                     , GV.Vector v (Node (WithMax a) b)
+                     ( GV.Vector v (Node (WithInfty a) (WithInfty b))
+                     , GV.Vector v (Node (WithMax (WithInfty a)) (WithInfty b))
                      )
-                     => (b -> a) -> Size -> [b] -> GTree VEB v a b
-fromAscListNWith f n = layoutWith f (lg n)
+                     => (b -> a) -> Size -> [b] -> GTree VEB v (WithInfty a) (WithInfty b)
+fromAscListNWith f n = let h = lg n in uncurry (layoutWith (fmap f)) . padToNextPower h n
 
 -- | Given a length n and a list xs of n elements, constructs a BST in
 -- VEB layout.
---
--- pre: n=2^h for some h.
-fromAscListN :: ( GV.Vector v (Node a a)
-                , GV.Vector v (Node (WithMax a) a)
+fromAscListN :: ( GV.Vector v (Node (WithInfty a) (WithInfty a))
+                , GV.Vector v (Node (WithMax (WithInfty a)) (WithInfty a))
                 )
-             => Size -> [a] -> GTree VEB v a a
+             => Size -> [a] -> GTree VEB v (WithInfty a) (WithInfty a)
 fromAscListN = fromAscListNWith id
+
+
+-- | pad the length to be a power of two
+padToNextPower        :: Height -> Size -> [a] -> (Height, [WithInfty a])
+padToNextPower h n xs | m == 0    = (h, xs')
+                      | otherwise = (h+1, xs' <> replicate m Infty)
+  where
+    m   = n - pow2 h
+    xs' = map Val xs
+
+
+--------------------------------------------------------------------------------
 
 -- | Given the leaf to value function, a height h, and a list of input
 -- elements xs, constructs a BST in VEB layout of the given height.
@@ -95,7 +106,7 @@ fillWith f = fillWith' (\(WithMax _ lM) _ (WithMax _ rM) -> WithMax lM rM)
 
 data WithMax c = WithMax {-# UNBOX #-} !c
                          {-# UNBOX #-} !c -- the maximum
-               deriving stock (Show,Eq,Generic)
+               deriving stock (Show,Eq,Ord,Generic)
                deriving anyclass (GStorable)
 
 type SST s cs = StateT cs (ST s)
@@ -203,7 +214,9 @@ shiftBy startOffSet size' t i = PartialTree offSet (fmap f t)
 lg :: Size -> Height
 lg = intLog2'
 
-pow2   :: Height -> Word
+{-# SPECIALIZE pow2 :: Height -> Word #-}
+{-# SPECIALIZE pow2 :: Height -> Int  #-}
+pow2   :: Num h => Height -> h
 pow2 h = 2 ^ h
 
 ----------------------------------------
@@ -218,12 +231,15 @@ numLeaves = pow2
 
 --------------------------------------------------------------------------------
 
-testTree :: Height -> Tree 'VEB Word Word
-testTree h = layout h [0..(pow2 h-1)]
+testTree' :: Height -> Tree VEB Word Word
+testTree' h = layout h [0..(pow2 h-1)]
+
+testTree    :: [a] -> Tree VEB (WithInfty a) (WithInfty a)
+testTree xs = fromAscListN (length xs) xs
 
 
 printTestTree :: Height -> IO ()
-printTestTree h = printTree $ testTree h
+printTestTree h = printTree $ testTree' h
 
 
 printTreeOf :: Height -> IO ()

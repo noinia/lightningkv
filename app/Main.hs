@@ -13,7 +13,7 @@ import Data.List(scanl1)
 genAscList   :: Height -> IO (Size, [Int])
 genAscList h = (\xs -> (n,scanl1 (+) xs)) <$> replicateM n (randomRIO (0,10))
   where
-    n = fromIntegral $ pow2 h
+    n = pow2 h
 
 
 buildMap    :: FilePath -> IO (Map.Map Int Int)

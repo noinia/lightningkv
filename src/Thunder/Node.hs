@@ -48,7 +48,8 @@ data Node a b = Leaf {-# UNPACK #-} !b
               | Node {-# UNPACK #-} !Index
                      {-# UNPACK #-} !a
                      {-# UNPACK #-} !Index
-              deriving (Show,Eq,Ord,Generic,Generic1,GStorable)
+              deriving stock (Show,Eq,Ord,Generic,Generic1)
+              deriving anyclass (GStorable)
 
 -- data Foo = Foo {-# UNPACK #-} !Int
 --                {-# UNPACK #-} !Index

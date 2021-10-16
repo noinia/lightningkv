@@ -30,6 +30,7 @@ library
 
   other-modules:   Thunder.Node
                    Thunder.KeyValue
+                   Thunder.WithInfty
 
   build-depends:
                      base                    ^>= 4.14.1.0

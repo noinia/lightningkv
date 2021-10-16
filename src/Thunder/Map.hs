@@ -24,26 +24,27 @@ import           GHC.Generics
 import qualified Thunder.Prokob as Prokob
 import           Thunder.Tree (GTree, Layout(..), searchLeafR, Node, leaves)
 import           Thunder.KeyValue
+import           Thunder.WithInfty
 import           Prelude hiding (lookup)
 -- -- import qualified Data.Vector.Storable.Mutable as UMV
 
 --------------------------------------------------------------------------------
 
 -- | VEB Tree based map.
-data GMap f g k v = Map (GTree VEB f (Key k) (KeyValue k v))
+data GMap f g k v = Map (GTree VEB f (WithInfty (Key k)) (WithInfty (KeyValue k v)))
                         (g v)
                     deriving (Generic)
 -- FIXME: Map is static for now.
 
 instance (Show k, Enum k, Show v
-         , GV.Vector f (Node (Key k) (KeyValue k v))
-         , GV.Vector f (KeyValue k v)
+         , GV.Vector f (Node (WithInfty (Key k)) (WithInfty (KeyValue k v)))
+         , GV.Vector f (WithInfty (KeyValue k v))
          , GV.Vector g v
          ) => Show (GMap f g k v) where
   showsPrec d m  = showParen (d > 10) $
     showString "fromList " . shows (toAscList m)
 
-instance ( NFData (f (Node (Key k) (KeyValue k v)))
+instance ( NFData (f (Node (WithInfty (Key k)) (WithInfty (KeyValue k v))))
          , NFData (g v)
          ) => NFData (GMap f g k v)
 
@@ -59,18 +60,20 @@ type Map = GMap SV.Vector V.Vector
 
 -- | Produce all key,value pairs in ascending order.
 toAscVector            :: ( GV.Vector w (k,v), GV.Vector w k, GV.Vector w v
-                          , GV.Vector f (Node (Key k) (KeyValue k v))
-                          , GV.Vector f (KeyValue k v)
-                          , GV.Vector w (KeyValue k v)
+                          , GV.Vector f (Node (WithInfty (Key k)) (WithInfty (KeyValue k v)))
+                          , GV.Vector f (WithInfty (KeyValue k v))
+                          , GV.Vector w (WithInfty (KeyValue k v))
                           , GV.Vector g v
                           , Enum k
                           )
                        => GMap f g k v -> w (k,v)
-toAscVector (Map t vs) = GV.zip (GV.map (unKey . getKey) . GV.convert $ leaves t) (GV.convert vs)
+toAscVector (Map t vs) = GV.zip ks (GV.convert vs)
+  where
+    ks = GV.mapMaybe (fmap (unKey . getKey) . toMaybe) . GV.convert $ leaves t
 
 -- | Produce all key,value pairs in ascending order.
-toAscList :: ( GV.Vector f (Node (Key k) (KeyValue k v))
-             , GV.Vector f (KeyValue k v)
+toAscList :: ( GV.Vector f (Node (WithInfty (Key k)) (WithInfty (KeyValue k v)))
+             , GV.Vector f (WithInfty (KeyValue k v))
              , GV.Vector g v
              , Enum k
              )
@@ -113,15 +116,14 @@ delete = undefined
 
 -- | Lookup a key in the map
 lookup                                     :: Enum k => k -> Map k v -> Maybe v
-lookup (mkKey -> q) (Map t vs) | q == k    = Just $ vs V.! i
-                               | otherwise = Nothing
-  where
-    (KeyValue k (Index i)) = searchLeafR (q >) t
-
+lookup (mkKey -> q) (Map t vs) = case searchLeafR (Val q > ) t of
+    Val (KeyValue k (Index i)) | q == k   -> Just $ vs V.! i
+                               |otherwise -> Nothing
+    Infty                                 -> Nothing
 
 -- | Successor query (lookupGE) in the map
 lookupGE                                     :: Enum k => k -> Map k v -> Maybe (k,v)
-lookupGE (mkKey -> q) (Map t vs) | q <= k    = Just $ (unKey k,vs V.! i)
-                                 | otherwise = Nothing
-  where
-    (KeyValue k (Index i)) = searchLeafR (q >) t
+lookupGE (mkKey -> q) (Map t vs) = case searchLeafR (Val q > ) t of
+    Val (KeyValue k (Index i)) | q <= k   -> Just $ (unKey k, vs V.! i)
+                               |otherwise -> Nothing
+    Infty                                 -> Nothing
