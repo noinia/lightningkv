@@ -144,10 +144,10 @@ pow2 h = 2 ^ h
 
 -- | pad the length to be a power of two
 padToNextPower        :: Height -> Size -> [a] -> (Height, [WithInfty a])
-padToNextPower h n xs | m == 0    = (h, xs')
+padToNextPower h n xs | m == n    = (h, xs')
                       | otherwise = (h+1, xs' <> replicate m Infty)
   where
-    m   = n - pow2 h
+    m   = pow2 (h+1) - n
     xs' = map Val xs
 
 ----------------------------------------

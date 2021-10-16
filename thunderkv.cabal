@@ -27,6 +27,9 @@ library
                    Thunder.Prokob
                    Thunder.BinTree
                    Thunder.Map
+                   Thunder.Map.Storable
+                   Thunder.Map.Boxed
+                   Thunder.Map.Base
 
   other-modules:   Thunder.Node
                    Thunder.KeyValue

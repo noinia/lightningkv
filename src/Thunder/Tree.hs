@@ -89,6 +89,9 @@ instance Functor v => Bifunctor (GTree l v) where
   bimap f g (Tree v) = Tree $ fmap (bimap f g) v
 
 
+
+
+
 -- | Convert into a BinTree
 toBinTree :: GV.Vector v (Node a b) => GTree l v a b -> BinTree a b
 toBinTree (Tree t) = go 0
