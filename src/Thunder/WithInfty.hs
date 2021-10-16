@@ -3,6 +3,7 @@
 {-# OPTIONS_GHC -fplugin-opt=Foreign.Storable.Generic.Plugin:-v2 #-}
 module Thunder.WithInfty
   ( WithInfty(..)
+  , fmapWithInfty
   , toMaybe
   ) where
 
@@ -20,7 +21,11 @@ instance (NFData a) => NFData (WithInfty a)
 instance NFData1 WithInfty
 
 instance Functor WithInfty where
-  fmap f = \case
+  fmap = fmapWithInfty
+
+
+fmapWithInfty   :: (a -> b) -> WithInfty a -> WithInfty b
+fmapWithInfty f = \case
     Val x -> Val (f x)
     Infty -> Infty
 

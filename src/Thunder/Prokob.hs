@@ -31,7 +31,7 @@ fromAscListNWith     ::
                      , GV.Vector v (Node (WithMax (WithInfty a)) (WithInfty b))
                      )
                      => (b -> a) -> Size -> [b] -> GTree VEB v (WithInfty a) (WithInfty b)
-fromAscListNWith f n = let h = lg n in uncurry (layoutWith (fmap f)) . padToNextPower h n
+fromAscListNWith f n = let h = lg n in uncurry (layoutWith (fmapWithInfty f)) . padToNextPower h n
 
 -- | Given a length n and a list xs of n elements, constructs a BST in
 -- VEB layout.
