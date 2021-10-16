@@ -15,7 +15,7 @@ import           Thunder.Tree (Size)
 
 --------------------------------------------------------------------------------
 
-type Map = Base.GMap SV.Vector V.Vector
+type Map = Base.Map SV.Vector V.Vector
 
 -- | Produce all key,value pairs in ascending order.
 toAscList :: (Enum k) => Map k v -> [(k,v)]

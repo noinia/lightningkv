@@ -15,7 +15,7 @@ import           Prelude hiding (lookup)
 
 --------------------------------------------------------------------------------
 
-type Map = Base.GMap SV.Vector SV.Vector
+type Map = Base.Map SV.Vector SV.Vector
 
 -- | Produce all key,value pairs in ascending order.
 toAscList :: (Enum k, Storable v) => Map k v -> [(k,v)]

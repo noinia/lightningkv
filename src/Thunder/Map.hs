@@ -1,5 +1,5 @@
 module Thunder.Map
-  ( module Thunder.Map.Base
+  ( module Thunder.Map.Storable
   ) where
 
-import Thunder.Map.Base
+import Thunder.Map.Storable
