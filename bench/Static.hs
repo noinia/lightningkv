@@ -30,7 +30,7 @@ main = defaultMainWith config
     ]
   where
     sizes = map round $ [1e3, 1e4, 1e5]
-    config = defaultConfig { reportFile = Just "io-algo-bench-report.html" }
+    config = defaultConfig { reportFile = Just "bench-thunderkv-report.html" }
 
 
 build   :: Int -> Benchmark
