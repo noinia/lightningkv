@@ -18,12 +18,10 @@ module Thunder.Tree
   , searchLeafR
 
   , Index
-
-
-
+  , Node
   ) where
 
-import           Control.DeepSeq
+-- -- import           Control.DeepSeq
 import           Control.Monad.Primitive (PrimMonad)
 import           Data.Bifoldable
 import           Data.Bifunctor
@@ -32,7 +30,7 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Generic.Mutable as GVM
 -- -- import           Data.Word (Word8)
-import           GHC.Generics
+-- -- import           GHC.Generics
 -- import           Data.Store
 -- import           Data.Store.TH
 import           Thunder.BinTree(BinTree(..))

@@ -1,3 +1,4 @@
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Thunder.Map
@@ -14,13 +15,13 @@ module Thunder.Map
 
 
 import           Control.Arrow (first)
-import           Data.Semigroup
 import qualified Data.Vector as V
-import Data.Vector.Primitive(Prim(..))
+import qualified Data.Vector.Generic as GV
+import           Data.Vector.Primitive (Prim(..))
 -- -- import qualified Data.Vector.Unboxed as UV
 import           Foreign.Storable
 import qualified Thunder.Prokob as Prokob
-import           Thunder.Tree (GTree, Layout(..), searchLeafR)
+import           Thunder.Tree (GTree, Layout(..), searchLeafR, Node, leaves)
 import           Prelude hiding (lookup)
 -- -- import qualified Data.Vector.Storable.Mutable as UMV
 
@@ -32,6 +33,10 @@ newtype Key k = Key Int deriving (Show,Eq,Ord,Storable,Prim)
 -- | Make a Key
 mkKey :: Enum k => k -> Key k
 mkKey = Key . fromEnum
+
+unKey         :: Enum k => Key k -> k
+unKey (Key k) = toEnum k
+
 
 -- -- instance UV.Unbox (Key k)
 
@@ -70,9 +75,13 @@ data GMap f g k v = Map (GTree VEB f (Key k) (KeyValue k v))
                         (g v)
 -- FIXME: Map is static for now.
 
-instance (Show k, Show v) => Show (Map k v) where
-  show (Map t vs) = show (t, vs)
-  -- TODO: FIXME.
+instance (Show k, Enum k, Show v
+         , GV.Vector f (Node (Key k) (KeyValue k v))
+         , GV.Vector f (KeyValue k v)
+         , GV.Vector g v
+         ) => Show (GMap f g k v) where
+  showsPrec d m  = showParen (d > 10) $
+    showString "fromList " . shows (toAscList m)
 
 -- instance Functor g => Functor (GMap f g k) where
 --   fmap f (Map t v) = Map (coerce' f t) (fmap f v)
@@ -82,6 +91,27 @@ instance (Show k, Show v) => Show (Map k v) where
 
 
 type Map = GMap V.Vector V.Vector
+
+
+-- | Produce all key,value pairs in ascending order.
+toAscVector            :: ( GV.Vector w (k,v), GV.Vector w k, GV.Vector w v
+                          , GV.Vector f (Node (Key k) (KeyValue k v))
+                          , GV.Vector f (KeyValue k v)
+                          , GV.Vector w (KeyValue k v)
+                          , GV.Vector g v
+                          , Enum k
+                          )
+                       => GMap f g k v -> w (k,v)
+toAscVector (Map t vs) = GV.zip (GV.map (unKey . getKey) . GV.convert $ leaves t) (GV.convert vs)
+
+-- | Produce all key,value pairs in ascending order.
+toAscList :: ( GV.Vector f (Node (Key k) (KeyValue k v))
+             , GV.Vector f (KeyValue k v)
+             , GV.Vector g v
+             , Enum k
+             )
+          => GMap f g k v -> [(k,v)]
+toAscList = V.toList . toAscVector
 
 --------------------------------------------------------------------------------
 
@@ -94,10 +124,11 @@ fromAscList xs = fromAscListN (length xs) xs
 -- | Given a length n = 2^h and a list of key value pairs xs, builds a Map.
 --
 -- pre: length xs == 2^h for some h.
-fromAscListN      :: forall k v. Enum k => Prokob.Size -> [(k,v)] -> Map k v
-fromAscListN n xs = let (ks,vs) = first (zipWith (flip (mkKeyValue @k @v)) [0..]) $ unzip xs
+fromAscListN      :: Enum k => Prokob.Size -> [(k,v)] -> Map k v
+fromAscListN n xs = let (ks,vs) = first (zipWith (flip mkKeyValue) [0..]) $ unzip xs
                     in Map (Prokob.fromAscListNWith getKey n ks)
                            (V.fromList vs)
+
 
 
 --------------------------------------------------------------------------------

@@ -21,9 +21,9 @@ import           Data.Semigroup
 import           Math.NumberTheory.Logarithms(intLog2')
 
 
-import qualified Data.Vector as V
+
 import qualified Data.Vector.Generic as GV
--- import qualified Data.Vector.Storable as SV
+import qualified Data.Vector.Storable as SV
 import           Thunder.BinTree
 import           Thunder.Tree
 import           Thunder.Node
@@ -63,7 +63,7 @@ layoutWith        :: forall v a b.
                   => (b -> a) -> Height -> [b] -> GTree VEB v a b
 layoutWith f h xs = bimapTree (\(WithMax x _) -> x) id
                   . fillWith f xs
-                  $ create @V.Vector h -- FIXME: don't use a boxed vector ere.
+                  $ create @SV.Vector h -- FIXME: don't use a boxed vector ere.
 
 -- | Lay out 2^h values in a BST in VEB layout.
 layout :: Height -> [b] -> Tree VEB b b
