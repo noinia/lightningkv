@@ -1,2 +1,3 @@
-# lightningkv
-Cache oblivious key-value store
+# ThunderKV
+
+Attempt at implementinga cache oblivious key-value store. WIP.
