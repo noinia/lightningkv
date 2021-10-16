@@ -8,7 +8,7 @@ module Thunder.Map
 
   -- , insert
   , lookup
-
+  , lookupGE
 
   , GMap
   ) where
@@ -106,7 +106,15 @@ delete = undefined
 
 -- | Lookup a key in the map
 lookup                                     :: Enum k => k -> Map k v -> Maybe v
-lookup (mkKey -> q) (Map t vs) | k == q    = Just $ vs V.! i
+lookup (mkKey -> q) (Map t vs) | q == k    = Just $ vs V.! i
                                | otherwise = Nothing
+  where
+    (KeyValue k (Index i)) = searchLeafR (q >) t
+
+
+-- | Successor query (lookupGE) in the map
+lookupGE                                     :: Enum k => k -> Map k v -> Maybe (k,v)
+lookupGE (mkKey -> q) (Map t vs) | q <= k    = Just $ (unKey k,vs V.! i)
+                                 | otherwise = Nothing
   where
     (KeyValue k (Index i)) = searchLeafR (q >) t
