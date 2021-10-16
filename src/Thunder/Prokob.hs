@@ -1,3 +1,6 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# OPTIONS_GHC -fplugin=Foreign.Storable.Generic.Plugin #-}
+{-# OPTIONS_GHC -fplugin-opt=Foreign.Storable.Generic.Plugin:-v2 #-}
 module Thunder.Prokob
   ( fromAscListNWith, fromAscListN
   , layoutWith, layout
@@ -17,19 +20,16 @@ import           Control.Monad.ST.Strict
 import           Control.Monad.Trans.State.Strict ( StateT, evalStateT
                                                   , get, put
                                                   )
-import           Data.Semigroup
-import           Math.NumberTheory.Logarithms(intLog2')
-
-
-
+import qualified Data.Tree as DataTree
+import qualified Data.Tree.View as TreeView
 import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Storable as SV
+import           Foreign.Storable.Generic
+import           GHC.Generics
+import           Math.NumberTheory.Logarithms (intLog2')
 import           Thunder.BinTree
-import           Thunder.Tree
 import           Thunder.Node
-
-import qualified Data.Tree.View as TreeView
-import qualified Data.Tree as DataTree
+import           Thunder.Tree
 --------------------------------------------------------------------------------
 
 type Height = Int
@@ -89,15 +89,14 @@ fillWith   :: ( GV.Vector v (Node a b)
               , GV.Vector w (Node (WithMax c) d)
               )
            => (d -> c) -> [d] -> GTree l v a b -> GTree l w (WithMax c) d
-fillWith f = fillWith' (\(WithMax _ (Max lM)) _ (WithMax _ rM) -> WithMax lM rM)
+fillWith f = fillWith' (\(WithMax _ lM) _ (WithMax _ rM) -> WithMax lM rM)
                        (\d _ -> d)
-                       (\d -> let c = f d in WithMax c (Max c))
+                       (\d -> let c = f d in WithMax c c)
 
 data WithMax c = WithMax {-# UNBOX #-} !c
-                         {-# UNBOX #-} !(Max c)
-               deriving (Show,Eq)
--- TODO: Storable instance
-
+                         {-# UNBOX #-} !c -- the maximum
+               deriving stock (Show,Eq,Generic)
+               deriving anyclass (GStorable)
 
 type SST s cs = StateT cs (ST s)
 

@@ -1,6 +1,5 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE ViewPatterns #-}
 module Thunder.Tree
   ( GTree(..) -- TODO: don't export constructor
   , Tree

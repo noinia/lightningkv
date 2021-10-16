@@ -70,6 +70,8 @@ library
                     , FlexibleInstances
                     , FlexibleContexts
                     , MultiParamTypeClasses
+                    , DerivingStrategies
+                    , DerivingVia
 
 executable thunderkv
     main-is:          Main.hs

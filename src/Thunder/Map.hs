@@ -16,6 +16,7 @@ module Thunder.Map
 
 import           Control.Arrow (first)
 import qualified Data.Vector as V
+import qualified Data.Vector.Storable as SV
 import qualified Data.Vector.Generic as GV
 -- -- import qualified Data.Vector.Unboxed as UV
 import qualified Thunder.Prokob as Prokob
@@ -46,7 +47,7 @@ instance (Show k, Enum k, Show v
 --       coerce' _ = coerce
 
 
-type Map = GMap V.Vector V.Vector
+type Map = GMap SV.Vector V.Vector
 
 
 -- | Produce all key,value pairs in ascending order.

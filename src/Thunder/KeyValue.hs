@@ -1,18 +1,25 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE UnboxedTuples #-}
+{-# OPTIONS_GHC -fplugin=Foreign.Storable.Generic.Plugin #-}
+{-# OPTIONS_GHC -fplugin-opt=Foreign.Storable.Generic.Plugin:-v2 #-}
 module Thunder.KeyValue
   ( Key, mkKey, unKey
   , Index(..)
   , KeyValue(..), mkKeyValue
   ) where
 
-import           Data.Vector.Primitive (Prim(..))
-import           Foreign.Storable
-import           Prelude hiding (lookup)
+import Data.Vector.Primitive (Prim)
+import Foreign.Storable
+import Foreign.Storable.Generic
+import GHC.Generics
+import Prelude hiding (lookup)
 
 --------------------------------------------------------------------------------
 
 -- | Key representing something of type k
-newtype Key k = Key Int deriving (Show,Eq,Ord,Storable,Prim)
+newtype Key k = Key Int
+              deriving (Show,Eq,Ord,Storable,Prim) via Int
+
 
 -- | Make a Key
 mkKey :: Enum k => k -> Key k
@@ -32,7 +39,7 @@ unKey (Key k) = toEnum k
 --------------------------------------------------------------------------------
 
 -- | Index that should return s.t. of type v
-newtype Index v = Index Int deriving (Show,Eq,Ord,Storable,Prim)
+newtype Index v = Index Int deriving (Show,Eq,Ord,Storable,Prim) via Int
 
 --------------------------------------------------------------------------------
 
@@ -40,7 +47,8 @@ newtype Index v = Index Int deriving (Show,Eq,Ord,Storable,Prim)
 data KeyValue k v = KeyValue { getKey        :: {-# UNPACK #-} !(Key k)
                              , getValueIndex :: {-# UNPACK #-} !(Index v)
                              }
-                  deriving (Show)
+                  deriving stock (Show,Generic)
+                  deriving anyclass (GStorable)
 
 mkKeyValue     :: Enum k => k -> Int -> KeyValue k v
 mkKeyValue k i = KeyValue (mkKey k) (Index i)
