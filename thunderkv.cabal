@@ -79,6 +79,45 @@ library
                    -- Thunder.KeyValue
                    -- Thunder.WithInfty
 
+  build-depends:
+                     base                    ^>= 4.14.1.0
+                   , tree-mono
+                   , tree-common
+
+                   , bifunctors              ^>= 5.5
+                   , containers              ^>= 0.6
+                   , primitive               ^>= 0.7.2.0
+                   , store                   ^>= 0.7
+                   , streamly                ^>= 0.8
+                   , tree-view               ^>= 0.5.1
+                   , vector                  ^>= 0.12
+                   , vector-mmap             ^>= 0.0.3
+                   , transformers            ^>= 0.5.6
+                   , integer-logarithms      ^>= 1.0
+
+--------------------------------------------------------------------------------
+-- The main implementation of the library using Backpack
+--------------------------------------------------------------------------------
+
+library thunderkv-backpack
+  import: common-build-depends, my-default-extensions
+  visibility: public
+  ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+  hs-source-dirs: backpack-lib_src
+  exposed-modules:
+                  -- Thunder.Tree
+                  --  Thunder.Prokob
+                  --  Thunder.BinTree
+                  --  Thunder.Map
+                  --  Thunder.Map.Storable
+                  --  Thunder.Map.Boxed
+                  --  Thunder.Map.Base
+
+  other-modules:
+                     -- Thunder.Node
+                   -- Thunder.KeyValue
+                   -- Thunder.WithInfty
+
   signatures: Key
 
   -- signatures:      InftyElem
@@ -99,10 +138,47 @@ library
                    , transformers            ^>= 0.5.6
                    , integer-logarithms      ^>= 1.0
 
-
 --------------------------------------------------------------------------------
 -- Helper Libraries
 --------------------------------------------------------------------------------
+
+-- library tree-refill
+--   import: common-build-depends, my-default-extensions
+--   ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+--   hs-source-dirs: tree-refill_src
+--   exposed-modules: Thunder.Tree.Refill
+--   mixins:
+--          -- , tree         (Thunder.Tree      as TreeAB_to_CD)
+--          , tree         (Thunder.Tree      as TreeAB_to_CWithMaxD)
+--          , cwithmax
+
+--   build-depends:     tree
+--                    -- , tree-mono
+--                    , tree-common
+--                    , cwithmax
+--                    , vector                  ^>= 0.12
+--                    , primitive               ^>= 0.7.2.0
+
+-- library treecwithmax
+--   import: common-build-depends, my-default-extensions
+--   ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+--   hs-source-dirs: treecwithmax
+--   exposed-modules: TreeWithCMax
+--   mixins:  tree       requires (C as NodeElem)
+--          , cwithmax
+--   build-depends: tree
+--                , cwithmax
+
+library cwithmax
+  import: common-build-depends, my-default-extensions
+  ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+  hs-source-dirs: cwithmax
+  exposed-modules: CAsElem
+  mixins:  tree
+         , withmax
+
+  build-depends:     tree
+                   , withmax
 
 library tree
   import: common-build-depends, my-default-extensions
@@ -117,6 +193,7 @@ library tree
                    , node
                    , vector                  ^>= 0.12
                    , primitive               ^>= 0.7.2.0
+                   , transformers            ^>= 0.5.6
 
 library node
   import: common-build-depends, my-default-extensions
@@ -149,37 +226,29 @@ library tree-common
   exposed-modules: Thunder.Tree.Types
                    Thunder.BinTree
 
+library withmax
+  import: common-build-depends, my-default-extensions
+  ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+  hs-source-dirs: withmax_src
+  exposed-modules: WithMax
+  signatures: MaxElem
+  build-depends:     tree-mono
+
+----------------------------------------
+-- * Implementation libraries
+
 -- library key-enum
 --   import: my-default-extensions
 --   ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
 --   hs-source-dirs: src
---   exposed-modules:
--- -- Thunder.KeyValue
+--   exposed-modules: Key
 
---   other-modules:
--- -- Thunder.Node
---                    -- Thunder.KeyValue
---                    -- Thunder.WithInfty
-
---   -- signatures:      InftyElem
-
---   -- build-depends:
---   --                    base                    ^>= 4.14.1.0
---   --                  , bifunctors              ^>= 5.5
---   --                  , containers              ^>= 0.6
---   --                  , deepseq                 ^>= 1.4.4.0
---   --                  , primitive               ^>= 0.7.2.0
---   --                  , store                   ^>= 0.7
---   --                  , streamly                ^>= 0.8
---   --                  , tree-view               ^>= 0.5.1
---   --                  , vector                  ^>= 0.12
---   --                  , vector-mmap             ^>= 0.0.3
---   --                  , transformers            ^>= 0.5.6
---   --                  , integer-logarithms      ^>= 1.0
---   --                  , derive-storable         ^>= 0.3.0
---   --                  , derive-storable-plugin  ^>= 0.2.3.4
-
-
+-- library int_impl
+--   import: common-build-depends, my-default-extensions
+--   ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+--   hs-source-dirs: int_impl
+--   exposed-modules: NodeElemInt, LeafElemInt
+  -- mixins:
 
 --------------------------------------------------------------------------------
 -- Executable

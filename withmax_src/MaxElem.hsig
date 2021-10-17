@@ -1,0 +1,22 @@
+signature MaxElem where
+
+import Control.DeepSeq
+import Foreign.Storable
+
+--------------------------------------------------------------------------------
+
+data Elem
+instance Eq       Elem
+instance Storable Elem
+
+instance Show     Elem
+instance NFData   Elem
+
+--------------------------------------------------------------------------------
+
+data MaxElem
+instance Eq       MaxElem
+instance Storable MaxElem
+
+instance Show     MaxElem
+instance NFData   MaxElem

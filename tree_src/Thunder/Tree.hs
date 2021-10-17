@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Thunder.Tree
   ( bimapTree, bimapNode
 
@@ -5,6 +6,12 @@ module Thunder.Tree
   , biTraverseTree
   , bifoldTree
   , biTraverseTreeM
+
+  , fillWith'
+
+  , TreeAB
+  , TreeCD
+  , A, B, C, D
   ) where
 
 import qualified TreeAB
@@ -14,10 +21,10 @@ import Thunder.Node
 
 import qualified Data.Vector.Storable as SV
 import           Control.Monad.Primitive (PrimMonad)
--- import           Control.Monad.ST.Strict
--- import           Control.Monad.Trans.State.Strict ( StateT, evalStateT
---                                                   , get, put
---                                                   )
+import           Control.Monad.ST.Strict
+import           Control.Monad.Trans.State.Strict ( StateT, evalStateT
+                                                  , get, put
+                                                  )
 -- import           Data.Bifoldable
 -- import           Data.Bifunctor
 import           Data.Functor.Identity
@@ -37,6 +44,7 @@ type TreeCD = TreeCD.Tree
 -- type D = TreeCD.LeafElem
 
 --------------------------------------------------------------------------------
+-- * Mapping
 
 -- | bimap implementation that uses vector's map rather than
 -- fmap. This avoids a functor v constraint, which storable vectors do
@@ -47,6 +55,8 @@ bimapTree                     :: (A -> C) -> (B -> D) -> TreeAB l -> TreeCD l
 bimapTree f g (TreeAB.Tree v) =
   TreeCD.Tree $ SV.generate (SV.length v) (\i -> bimapNode f g $ v SV.! i)
 
+----------------------------------------
+-- * Traversals
 
 {-
  claim: biTraverseTree on VEB layout uses O(N/B) IOs.
@@ -139,3 +149,32 @@ biTraverseTreeM node leaf liftCD t = do w <- SVM.new (fromIntegral n)
                                pure c
 
     n = TreeAB.numNodes t
+
+
+--------------------------------------------------------------------------------
+-- * Filling Binary Search Trees
+
+
+type SST s cs = StateT cs (ST s)
+
+-- | More general version of fillWith that allows us to specify how to
+-- construct a node, how to create a leaf, and how to lift a leaf into
+-- a c.
+fillWith'                  :: forall x l. (C -> A -> C -> C) -- ^ node combinator
+                           -> (x -> B -> D)      -- ^ leaf builder
+                           -> (D -> C)           -- ^ lift a leaf into c
+                           -> [x]
+                           -> TreeAB l -> TreeCD l
+fillWith' node leaf f xs t = runST (flip evalStateT xs $ biTraverseTreeM node' leaf' lift' t)
+  where
+    node'         :: Index -> C -> A -> C -> SST s [x] C
+    node' _ l a r = pure $ node l a r
+
+    leaf'     :: Index -> B -> SST s [x] D
+    leaf' _ b = get >>= \case
+                  []      -> error "fillWith: too few elements"
+                  (x:xs') -> do put xs'
+                                pure $ leaf x b
+
+    lift' :: D -> SST s [x] C
+    lift' = pure . f
