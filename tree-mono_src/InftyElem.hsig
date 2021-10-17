@@ -1,0 +1,9 @@
+signature InftyElem where
+
+import Foreign.Storable
+
+data InftyElem
+instance Eq       InftyElem
+instance Ord      InftyElem
+instance Show     InftyElem
+instance Storable InftyElem

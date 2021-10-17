@@ -1,0 +1,11 @@
+signature NodeElem where
+
+import Control.DeepSeq
+import Foreign.Storable
+
+data NodeElem
+instance Eq       NodeElem
+instance Storable NodeElem
+
+instance Show     NodeElem
+instance NFData   NodeElem

@@ -1,0 +1,9 @@
+signature Key where
+
+import Control.DeepSeq
+-- import Foreign.Storable
+
+data Key
+instance Eq       Key
+instance Ord      Key
+instance NFData   Key

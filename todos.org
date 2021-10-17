@@ -1,0 +1,21 @@
+
+* TODO Unpack the WithInfties
+
+* TODO Unpack the Nodes
+
+* TODO Implement Delete
+
+to delete we can essentially just bottom up delete. If we delete
+s.t. from the right child update the max to become Infty. If we delete
+from the left, swap the left and right child.
+
+claim is that this maintains cache obliviousness:
+
+i.e. suppose we swap the children l and r of node v
+- if l and r were in the same block as v, they remain so
+- if l and r where in different blocks from v we needed an io to load
+  either l or r anyway. That remains the same.
+
+** TODO figure out how I actually want to do this, i.e. if I want to modify things in place yes or no.
+
+* TODO set up testing
