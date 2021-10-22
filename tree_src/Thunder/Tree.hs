@@ -8,10 +8,9 @@ module Thunder.Tree
   , biTraverseTreeM
 
   , fillWith'
-
   , TreeAB
   , TreeCD
-  , A, B, C, D
+  -- , A, B, C, D
   ) where
 
 import qualified TreeAB
@@ -29,19 +28,20 @@ import           Control.Monad.Trans.State.Strict ( StateT, evalStateT
 -- import           Data.Bifunctor
 import           Data.Functor.Identity
 import qualified Data.Vector.Storable.Mutable as SVM
+import qualified A
+import qualified B
+import qualified C
+import qualified D
 
 --------------------------------------------------------------------------------
 
 type TreeAB = TreeAB.Tree
 type TreeCD = TreeCD.Tree
 
--- type NodeAB = TreeAB.Node
--- type NodeCD = TreeCD.Node
-
--- type A = TreeAB.NodeElem
--- type B = TreeAB.LeafElem
--- type C = TreeCD.NodeElem
--- type D = TreeCD.LeafElem
+type A = A.NodeElem
+type B = B.LeafElem
+type C = C.NodeElem
+type D = D.LeafElem
 
 --------------------------------------------------------------------------------
 -- * Mapping

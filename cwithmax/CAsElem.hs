@@ -1,8 +1,6 @@
 module CAsElem where
 
-import Thunder.Tree
-import WithMax
+import qualified C
 
-type MaxElem  = C
-type Elem     = C
-type CWithMax = WithMax
+type MaxElem  = C.NodeElem
+type Elem     = C.NodeElem

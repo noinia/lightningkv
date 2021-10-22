@@ -80,7 +80,6 @@ library
                    -- Thunder.WithInfty
 
   build-depends:
-                     base                    ^>= 4.14.1.0
                    , tree-mono
                    , tree-common
 
@@ -123,7 +122,6 @@ library thunderkv-backpack
   -- signatures:      InftyElem
 
   build-depends:
-                     base                    ^>= 4.14.1.0
                    , tree-mono
                    , tree-common
 
@@ -148,14 +146,15 @@ library thunderkv-backpack
 --   hs-source-dirs: tree-refill_src
 --   exposed-modules: Thunder.Tree.Refill
 --   mixins:
---          -- , tree         (Thunder.Tree      as TreeAB_to_CD)
---          , tree         (Thunder.Tree      as TreeAB_to_CWithMaxD)
---          , cwithmax
+--          , tree      (Thunder.Tree      as TreeAB_to_CD)
+--          , tree      (Thunder.Tree      as TreeAB_to_CWithMaxD)
+--          , withmax                                                requires (MaxElem as CAsElem)
 
 --   build-depends:     tree
 --                    -- , tree-mono
 --                    , tree-common
---                    , cwithmax
+--                    , cwithmax-impl
+--                    , withmax
 --                    , vector                  ^>= 0.12
 --                    , primitive               ^>= 0.7.2.0
 
@@ -164,21 +163,20 @@ library thunderkv-backpack
 --   ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
 --   hs-source-dirs: treecwithmax
 --   exposed-modules: TreeWithCMax
---   mixins:  tree       requires (C as NodeElem)
+--   mixins:  tree       requires (C as CWithMax)
+--          , withmax    requires ()
 --          , cwithmax
 --   build-depends: tree
 --                , cwithmax
 
-library cwithmax
+library cwithmax-impl
   import: common-build-depends, my-default-extensions
   ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
   hs-source-dirs: cwithmax
   exposed-modules: CAsElem
   mixins:  tree
-         , withmax
 
   build-depends:     tree
-                   , withmax
 
 library tree
   import: common-build-depends, my-default-extensions
@@ -243,31 +241,35 @@ library withmax
 --   hs-source-dirs: src
 --   exposed-modules: Key
 
--- library int_impl
---   import: common-build-depends, my-default-extensions
---   ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
---   hs-source-dirs: int_impl
---   exposed-modules: NodeElemInt, LeafElemInt
-  -- mixins:
+library int-impl
+  import: common-build-depends, my-default-extensions
+  ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+  hs-source-dirs: int_impl
+  exposed-modules: NodeElemInt, LeafElemInt
 
 --------------------------------------------------------------------------------
 -- Executable
 --------------------------------------------------------------------------------
 
--- executable thunderkv
---   import: my-default-extensions
---   main-is:          Main.hs
+executable thunderkv
+  import: my-default-extensions
+  -- main-is:          Main.hs
+  main-is:          Test.hs
+  hs-source-dirs:   app
 
---   -- Modules included in this executable, other than Main.
---   -- other-modules:
 
---   -- LANGUAGE extensions used by modules in this package.
---   -- other-extensions:
---   build-depends: base                    ^>= 4.14.1.0
---                , thunderkv
---                , random                  ^>= 1.2.0
+  -- Modules included in this executable, other than Main.
+  -- other-modules:
+  mixins: tree-mono requires (NodeElem as NodeElemInt, LeafElem as LeafElemInt)
 
---   hs-source-dirs:   app
+  build-depends: base                    ^>= 4.14.1.0
+               -- , thunderkv
+               , tree-mono
+               , int-impl
+               , random                  ^>= 1.2.0
+
+
+
 
 --------------------------------------------------------------------------------
 -- DocTests
