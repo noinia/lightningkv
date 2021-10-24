@@ -24,249 +24,292 @@ source-repository head
 
 common common-build-depends
   build-depends:
-                     base                    ^>= 4.14.1.0
-                   , deepseq                 ^>= 1.4.4.0
-                   , derive-storable         ^>= 0.3.0
-                   , derive-storable-plugin  ^>= 0.2.3.4
+      base                    ^>= 4.14.1.0
+    , deepseq                 ^>= 1.4.4.0
+    , derive-storable         ^>= 0.3.0
+    , derive-storable-plugin  ^>= 0.2.3.4
 
 
-common my-default-extensions
-  default-language:    Haskell2010
-  default-extensions: TypeFamilies
-                    , GADTs
-                    , KindSignatures
-                    , DataKinds
-                    , TypeOperators
-                    , ConstraintKinds
-                    , PolyKinds
-                    , RankNTypes
-                    , TypeApplications
-                    , ScopedTypeVariables
+common default-compiler-options
+  ghc-options:
+    -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+  default-language:
+    Haskell2010
+  default-extensions:
+      TypeFamilies
+    , GADTs
+    , KindSignatures
+    , DataKinds
+    , TypeOperators
+    , ConstraintKinds
+    , PolyKinds
+    , RankNTypes
+    , TypeApplications
+    , ScopedTypeVariables
 
-                    , PatternSynonyms
-                    , TupleSections
-                    , LambdaCase
-                    , ViewPatterns
+    , PatternSynonyms
+    , TupleSections
+    , LambdaCase
+    , ViewPatterns
 
-                    , StandaloneDeriving
-                    , GeneralizedNewtypeDeriving
-                    , DeriveGeneric
-                    , FlexibleInstances
-                    , FlexibleContexts
-                    , MultiParamTypeClasses
-                    , DerivingStrategies
-                    , DerivingVia
+    , StandaloneDeriving
+    , GeneralizedNewtypeDeriving
+    , DeriveGeneric
+    , FlexibleInstances
+    , FlexibleContexts
+    , MultiParamTypeClasses
+    , DerivingStrategies
+    , DerivingVia
 
 --------------------------------------------------------------------------------
 -- Main Library
 --------------------------------------------------------------------------------
 
 library
-  import: common-build-depends, my-default-extensions
-  ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+  import: common-build-depends, default-compiler-options
   hs-source-dirs: src
   exposed-modules:
-                  -- Thunder.Tree
-                  --  Thunder.Prokob
-                  --  Thunder.BinTree
-                  --  Thunder.Map
-                  --  Thunder.Map.Storable
-                  --  Thunder.Map.Boxed
-                  --  Thunder.Map.Base
+    -- Thunder.Tree
+    --  Thunder.Prokob
+    --  Thunder.BinTree
+    --  Thunder.Map
+    --  Thunder.Map.Storable
+    --  Thunder.Map.Boxed
+    --  Thunder.Map.Base
 
   other-modules:
-                     -- Thunder.Node
-                   -- Thunder.KeyValue
-                   -- Thunder.WithInfty
+      -- Thunder.Node
+    -- Thunder.KeyValue
+    -- Thunder.WithInfty
+
+  -- signatures: Key
 
   build-depends:
-                   , tree-mono
-                   , tree-common
+                   -- , tree-mono
+                   -- , tree-common
+    , bifunctors              ^>= 5.5
+    , containers              ^>= 0.6
+    , primitive               ^>= 0.7.2.0
+    , store                   ^>= 0.7
+    , streamly                ^>= 0.8
+    , tree-view               ^>= 0.5.1
+    , vector                  ^>= 0.12
+    , vector-mmap             ^>= 0.0.3
+    , transformers            ^>= 0.5.6
+    , integer-logarithms      ^>= 1.0
 
-                   , bifunctors              ^>= 5.5
-                   , containers              ^>= 0.6
-                   , primitive               ^>= 0.7.2.0
-                   , store                   ^>= 0.7
-                   , streamly                ^>= 0.8
-                   , tree-view               ^>= 0.5.1
-                   , vector                  ^>= 0.12
-                   , vector-mmap             ^>= 0.0.3
-                   , transformers            ^>= 0.5.6
-                   , integer-logarithms      ^>= 1.0
+-- --------------------------------------------------------------------------------
+-- -- Main Library implemented using Enum types
+-- --------------------------------------------------------------------------------
 
---------------------------------------------------------------------------------
--- The main implementation of the library using Backpack
---------------------------------------------------------------------------------
+-- library thunderkv-enum
+--   import: common-build-depends, default-compiler-options
+--   visibility: public
+--   hs-source-dirs: backpack-lib_src
+--   exposed-modules:
+--                   -- Thunder.Tree
+--                   --  Thunder.Prokob
+--                   --  Thunder.BinTree
+--                   --  Thunder.Map
+--                   --  Thunder.Map.Storable
+--                   --  Thunder.Map.Boxed
+--                   --  Thunder.Map.Base
 
-library thunderkv-backpack
-  import: common-build-depends, my-default-extensions
-  visibility: public
-  ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
-  hs-source-dirs: backpack-lib_src
-  exposed-modules:
-                  -- Thunder.Tree
-                  --  Thunder.Prokob
-                  --  Thunder.BinTree
-                  --  Thunder.Map
-                  --  Thunder.Map.Storable
-                  --  Thunder.Map.Boxed
-                  --  Thunder.Map.Base
+--   other-modules:
+--                      -- Thunder.Node
+--                    -- Thunder.KeyValue
+--                    -- Thunder.WithInfty
 
-  other-modules:
-                     -- Thunder.Node
-                   -- Thunder.KeyValue
-                   -- Thunder.WithInfty
 
-  signatures: Key
+--   -- signatures:      InftyElem
 
-  -- signatures:      InftyElem
+--   build-depends:
+--                    , tree-mono
+--                    , tree-common
 
-  build-depends:
-                   , tree-mono
-                   , tree-common
-
-                   , bifunctors              ^>= 5.5
-                   , containers              ^>= 0.6
-                   , primitive               ^>= 0.7.2.0
-                   , store                   ^>= 0.7
-                   , streamly                ^>= 0.8
-                   , tree-view               ^>= 0.5.1
-                   , vector                  ^>= 0.12
-                   , vector-mmap             ^>= 0.0.3
-                   , transformers            ^>= 0.5.6
-                   , integer-logarithms      ^>= 1.0
+--                    , bifunctors              ^>= 5.5
+--                    , containers              ^>= 0.6
+--                    , primitive               ^>= 0.7.2.0
+--                    , store                   ^>= 0.7
+--                    , streamly                ^>= 0.8
+--                    , tree-view               ^>= 0.5.1
+--                    , vector                  ^>= 0.12
+--                    , vector-mmap             ^>= 0.0.3
+--                    , transformers            ^>= 0.5.6
+--                    , integer-logarithms      ^>= 1.0
 
 --------------------------------------------------------------------------------
 -- Helper Libraries
 --------------------------------------------------------------------------------
 
--- library tree-refill
---   import: common-build-depends, my-default-extensions
---   ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
---   hs-source-dirs: tree-refill_src
---   exposed-modules: Thunder.Tree.Refill
---   mixins:
---          , tree      (Thunder.Tree      as TreeAB_to_CD)
---          , tree      (Thunder.Tree      as TreeAB_to_CWithMaxD)
---          , withmax                                                requires (MaxElem as CAsElem)
+-- -- library tree-refill
+-- --   import: common-build-depends, default-compiler-options
+-- --   hs-source-dirs: tree-refill_src
+-- --   exposed-modules: Thunder.Tree.Refill
+-- --   mixins:
+-- --          , tree      (Thunder.Tree      as TreeAB_to_CD)
+-- --          , tree      (Thunder.Tree      as TreeAB_to_CWithMaxD)
+-- --          , withmax                                                requires (MaxElem as CAsElem)
 
---   build-depends:     tree
---                    -- , tree-mono
---                    , tree-common
---                    , cwithmax-impl
---                    , withmax
---                    , vector                  ^>= 0.12
---                    , primitive               ^>= 0.7.2.0
+-- --   build-depends:     tree-transform
+-- --                    -- , tree-mono
+-- --                    , tree-common
+-- --                    , cwithmax-impl
+-- --                    , withmax
+-- --                    , vector                  ^>= 0.12
+-- --                    , primitive               ^>= 0.7.2.0
 
--- library treecwithmax
---   import: common-build-depends, my-default-extensions
---   ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
---   hs-source-dirs: treecwithmax
---   exposed-modules: TreeWithCMax
---   mixins:  tree       requires (C as CWithMax)
---          , withmax    requires ()
---          , cwithmax
---   build-depends: tree
---                , cwithmax
+-- -- library treecwithmax
+-- --   import: common-build-depends, default-compiler-options
+-- --   hs-source-dirs: treecwithmax
+-- --   exposed-modules: TreeWithCMax
+-- --   mixins:  tree       requires (C as CWithMax)
+-- --          , withmax    requires ()
+-- --          , cwithmax
+-- --   build-depends: tree
+-- --                , cwithmax
 
-library cwithmax-impl
-  import: common-build-depends, my-default-extensions
-  ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
-  hs-source-dirs: cwithmax
-  exposed-modules: CAsElem
-  mixins:  tree
-
-  build-depends:     tree
-
-library tree
-  import: common-build-depends, my-default-extensions
-  ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+-- | Impelements functions that transform a 'Tree a b' into a 'Tree c d'
+library tree-transform
+  import: common-build-depends, default-compiler-options
   hs-source-dirs: tree_src
   exposed-modules: Thunder.Tree
-  mixins:  tree-mono (Thunder.Tree.Mono as TreeAB) requires (NodeElem as A, LeafElem as B)
-         , tree-mono (Thunder.Tree.Mono as TreeCD) requires (NodeElem as C, LeafElem as D)
+  -- reexported-modules: TreeAB, TreeCD, NodeAB, NodeCD
 
-  build-depends:     tree-mono
-                   , tree-common
-                   , node
-                   , vector                  ^>= 0.12
-                   , primitive               ^>= 0.7.2.0
-                   , transformers            ^>= 0.5.6
+  mixins:
+      tree-mono (Thunder.Tree.Mono as TreeAB) requires (NodeElem as A, LeafElem as B)
+    , tree-mono (Thunder.Tree.Mono as TreeCD) requires (NodeElem as C, LeafElem as D)
 
-library node
-  import: common-build-depends, my-default-extensions
-  ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+  build-depends:
+      tree-mono
+    , tree-common
+    , node-transform
+    , vector                  ^>= 0.12
+    , primitive               ^>= 0.7.2.0
+    , transformers            ^>= 0.5.6
+
+-- | Implements a function that can transform a 'Node a b' into a 'Node c d'
+library node-transform
+  import: common-build-depends, default-compiler-options
   hs-source-dirs: node_src
   exposed-modules: Thunder.Node
-  mixins:  tree-mono (Thunder.Node.Mono as NodeAB) requires (NodeElem as A, LeafElem as B)
-         , tree-mono (Thunder.Node.Mono as NodeCD) requires (NodeElem as C, LeafElem as D)
-  build-depends:     tree-mono
-                   , tree-common
+  -- reexported-modules: NodeAB, NodeCD
+  mixins:
+      tree-mono (Thunder.Node.Mono as NodeAB) requires (NodeElem as A, LeafElem as B)
+    , tree-mono (Thunder.Node.Mono as NodeCD) requires (NodeElem as C, LeafElem as D)
+  build-depends: tree-mono, tree-common
 
+-- | implements Node and Tree types that are parameterized by a LeafElem and NodeElem type
 library tree-mono
-  import: common-build-depends, my-default-extensions
-  ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+  import: common-build-depends, default-compiler-options
   hs-source-dirs: tree-mono_src
-  exposed-modules: Thunder.Tree.Mono
-                   Thunder.Node.Mono
-  signatures: LeafElem
-              NodeElem
+  exposed-modules:
+    Thunder.Tree.Mono
+    Thunder.Node.Mono
+  signatures:
+    LeafElem
+    NodeElem
+  build-depends:
+       tree-common
+     , containers              ^>= 0.6
+     , tree-view               ^>= 0.5.1
+     , vector                  ^>= 0.12
 
-  build-depends:     tree-common
-                   , containers              ^>= 0.6
-                   , tree-view               ^>= 0.5.1
-                   , vector                  ^>= 0.12
-
+-- | Common types where the Nodes depend on
 library tree-common
-  import: common-build-depends, my-default-extensions
-  ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+  import: common-build-depends, default-compiler-options
   hs-source-dirs: tree-common_src
-  exposed-modules: Thunder.Tree.Types
-                   Thunder.BinTree
+  exposed-modules:
+    Thunder.Tree.Types
+    Thunder.BinTree
 
+-- | Defines data type 'WithMax a = WithMax a a', where a = MaxElem
 library withmax
-  import: common-build-depends, my-default-extensions
-  ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+  import: common-build-depends, default-compiler-options
   hs-source-dirs: withmax_src
   exposed-modules: WithMax
   signatures: MaxElem
-  build-depends:     tree-mono
+
+----------------------------------------
+-- * Internal Implementations
+
+-- | Implements the 'MaxElem' signature by using 'NodeElem' as its value.
+library nodeelem-as-maxelem
+  import: common-build-depends, default-compiler-options
+  hs-source-dirs: withmax_impl
+  signatures: NodeElem, LeafElem
+  exposed-modules: NodeElemAsMaxElem
+  build-depends: tree-mono
+
+-- | Implements the 'NodeElem' signature by using 'WithMax' as its value.
+library max-elem-as-nodeelem
+  import: common-build-depends, default-compiler-options
+  hs-source-dirs: withmax_impl
+  signatures: MaxElem
+  exposed-modules: WithMaxAsNodeElem
+  build-depends: withmax
+
+-- | Given a 'NodeElem' signature, defines a new 'NodeElemWithMax' type
+-- that essenitally implements: 'type NodeElemWithMax = WithMax NodeElem NodeElem'
+library withmaxnode
+  import: common-build-depends, default-compiler-options
+  -- hs-source-dirs: withmax_impl
+  exposed-modules: Foo
+  signatures: NodeElem, LeafElem
+  mixins:
+      withmax                requires (MaxElem  as NodeElemAsMaxElem)
+        -- , nodeelem-as-maxelem    requires (NodeElem as NodeElemWithMax)
+-- max-elem-as-nodeelem   requires (MaxElem  as NodeElemAsMaxElem)
+  build-depends:
+     --max-elem-as-nodeelem
+    , nodeelem-as-maxelem
+    , withmax
+    -- , tree-mono
 
 ----------------------------------------
 -- * Implementation libraries
 
 -- library key-enum
---   import: my-default-extensions
---   ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
---   hs-source-dirs: src
+--   import: default-compiler-options
+-- --   hs-source-dirs: src
 --   exposed-modules: Key
 
+-- | Modules that implement the 'NodeElem' and 'LeafElem' signatures
+--   with either Ints or Chars.
 library int-impl
-  import: common-build-depends, my-default-extensions
-  ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+  import: common-build-depends, default-compiler-options
   hs-source-dirs: int_impl
-  exposed-modules: NodeElemInt, LeafElemInt
+  exposed-modules: NodeElemInt, LeafElemInt, NodeElemChar, LeafElemChar
 
 --------------------------------------------------------------------------------
 -- Executable
 --------------------------------------------------------------------------------
 
-executable thunderkv
-  import: my-default-extensions
-  -- main-is:          Main.hs
-  main-is:          Test.hs
-  hs-source-dirs:   app
+-- executable thunderkv
+--   import: default-compiler-options
+--   -- main-is:          Main.hs
+--   main-is:          Test.hs
+--   hs-source-dirs:   app
 
 
-  -- Modules included in this executable, other than Main.
-  -- other-modules:
-  mixins: tree-mono requires (NodeElem as NodeElemInt, LeafElem as LeafElemInt)
+--   -- Modules included in this executable, other than Main.
+--   -- other-modules:
+--   mixins:
+--            -- node-transform requires (A as NodeElemInt, B as LeafElemInt, C as NodeElemInt, D as LeafElemChar)
+--          , tree-mono (Thunder.Node.Mono as NodeCD) requires (NodeElem as NodeElemInt
+--                                                             ,LeafElem as LeafElemInt)
+--          , tree-mono (Thunder.Node.Mono as NodeCWithMaxD) requires (NodeElem as NodeElemWithMax
+--                                                                    ,LeafElem as LeafElemInt)
 
-  build-depends: base                    ^>= 4.14.1.0
-               -- , thunderkv
-               , tree-mono
-               , int-impl
-               , random                  ^>= 1.2.0
+
+
+--   build-depends: base                    ^>= 4.14.1.0
+--                -- , thunderkv
+--                -- , node
+--                , tree-mono
+--                , nodewithmax
+--                , int-impl
+--                , random                  ^>= 1.2.0
 
 
 
@@ -276,22 +319,23 @@ executable thunderkv
 --------------------------------------------------------------------------------
 
 test-suite doctests
-  import: my-default-extensions
+  import: default-compiler-options
   type:          exitcode-stdio-1.0
   ghc-options:   -threaded
   main-is:       doctests.hs
-  build-depends: base                     ^>= 4.14.1.0
-               , doctest                  ^>= 0.8
-               , doctest-discover
-               , QuickCheck
-               , quickcheck-instances
+  build-depends:
+      base                     ^>= 4.14.1.0
+    , doctest                  ^>= 0.8
+    , doctest-discover
+    , QuickCheck
+    , quickcheck-instances
 
 --------------------------------------------------------------------------------
 -- Benchmarks
 --------------------------------------------------------------------------------
 
 benchmark bench
-  import: my-default-extensions
+  import: default-compiler-options
   hs-source-dirs: bench
 
   main-is: Static.hs
@@ -299,14 +343,14 @@ benchmark bench
 
   other-modules: SortedVec
   build-depends:
-                base                    ^>= 4.14.1.0
-              , thunderkv
-              , criterion               ^>= 1.5.9
-              -- , tasty-bench             >= 0.2
-              , random                  ^>= 1.2
-              , vector
-              , deepseq
-              , mtl
-              , containers              ^>= 0.6
+      base                    ^>= 4.14.1.0
+    , thunderkv
+    , criterion               ^>= 1.5.9
+    -- , tasty-bench             >= 0.2
+    , random                  ^>= 1.2
+    , vector
+    , deepseq
+    , mtl
+    , containers              ^>= 0.6
 
-  ghc-options: -Wall -O2 -rtsopts -fno-warn-unticked-promoted-constructors
+  ghc-options: -O2

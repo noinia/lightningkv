@@ -1,8 +1,19 @@
 module Main where
 
-import Thunder.Node.Mono
+import Thunder.Node
+import qualified NodeCD
+import qualified NodeCWithMaxD
 
-myNode :: Node
-myNode = Node 1 5 2
+myNode :: NodeCD.Node
+myNode = NodeCD.Node 1 5 97
 
-main = print myNode
+
+myMaxNode = MyMaxNode.Node 1 (WithMax 5 5) 9
+
+-- myCDNode :: NodeCD.Node
+-- myCDNode = bimapNode id toEnum myNode
+
+
+
+main = do print myNode
+          print myMaxNode

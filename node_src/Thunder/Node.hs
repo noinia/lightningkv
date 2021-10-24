@@ -1,4 +1,5 @@
-module Thunder.Node(bimapNode) where
+module Thunder.Node( bimapNode
+                   ) where
 
 import qualified NodeAB
 import qualified NodeCD

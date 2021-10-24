@@ -14,7 +14,7 @@ import           GHC.Generics
 
 --------------------------------------------------------------------------------
 
-data WithMax = WithMax {-# UNBOX #-} !Elem
-                       {-# UNBOX #-} !MaxElem -- ^ the maximum
+data WithMax = WithMax {-# UNPACK #-} !Elem
+                       {-# UNPACK #-} !MaxElem -- ^ the maximum
              deriving stock (Show,Generic)
              deriving anyclass (GStorable,NFData)
