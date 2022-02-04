@@ -19,8 +19,48 @@ source-repository head
   type:     git
   location: https://github.com/noinia/lightningkv
 
+common common-build-depends
+  build-depends:
+      base                    >= 4.14.1.0
+    , deepseq                 >= 1.4.4.0
+    , containers              >= 0.6
+    , derive-storable         >= 0.3.0
+    , derive-storable-plugin  >= 0.2.3.4
+
+
+common default-compiler-options
+  ghc-options:
+    -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+  default-language:
+    Haskell2010
+  default-extensions:
+      TypeFamilies
+    , GADTs
+    , KindSignatures
+    , DataKinds
+    , TypeOperators
+    , ConstraintKinds
+    , PolyKinds
+    , RankNTypes
+    , TypeApplications
+    , ScopedTypeVariables
+
+    , PatternSynonyms
+    , TupleSections
+    , LambdaCase
+    , ViewPatterns
+
+    , StandaloneDeriving
+    , GeneralizedNewtypeDeriving
+    , DeriveGeneric
+    , FlexibleInstances
+    , FlexibleContexts
+    , MultiParamTypeClasses
+    , DerivingStrategies
+    , DerivingVia
 
 library
+  import: common-build-depends, default-compiler-options
   ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
   hs-source-dirs: src
   exposed-modules: Thunder.Tree
@@ -36,10 +76,7 @@ library
                    Thunder.WithInfty
 
   build-depends:
-                     base                    ^>= 4.14.1.0
                    , bifunctors              ^>= 5.5
-                   , containers              ^>= 0.6
-                   , deepseq                 ^>= 1.4.4.0
                    , primitive               ^>= 0.7.2.0
                    , store                   ^>= 0.7
                    , streamly                ^>= 0.8
@@ -48,36 +85,9 @@ library
                    , vector-mmap             ^>= 0.0.3
                    , transformers            ^>= 0.5.6
                    , integer-logarithms      ^>= 1.0
-                   , derive-storable         ^>= 0.3.0
-                   , derive-storable-plugin  ^>= 0.2.3.4
-
-  default-language:    Haskell2010
-  default-extensions: TypeFamilies
-                    , GADTs
-                    , KindSignatures
-                    , DataKinds
-                    , TypeOperators
-                    , ConstraintKinds
-                    , PolyKinds
-                    , RankNTypes
-                    , TypeApplications
-                    , ScopedTypeVariables
-
-                    , PatternSynonyms
-                    , TupleSections
-                    , LambdaCase
-                    , ViewPatterns
-
-                    , StandaloneDeriving
-                    , GeneralizedNewtypeDeriving
-                    , DeriveGeneric
-                    , FlexibleInstances
-                    , FlexibleContexts
-                    , MultiParamTypeClasses
-                    , DerivingStrategies
-                    , DerivingVia
 
 executable thunderkv
+    import: common-build-depends, default-compiler-options
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
@@ -85,62 +95,34 @@ executable thunderkv
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
-    build-depends: base                    ^>= 4.14.1.0
-                 , thunderkv
+    build-depends: thunderkv
                  , random                  ^>= 1.2.0
 
     hs-source-dirs:   app
-    default-language: Haskell2010
 
 test-suite doctests
+  import: common-build-depends, default-compiler-options
   type:          exitcode-stdio-1.0
   ghc-options:   -threaded
   main-is:       doctests.hs
-  build-depends: base                     ^>= 4.14.1.0
-               , doctest                  ^>= 0.8
+  build-depends: doctest                  ^>= 0.8
                , doctest-discover
                , QuickCheck
                , quickcheck-instances
 
-  default-language:    Haskell2010
-
-
 benchmark bench
-
+  import: common-build-depends, default-compiler-options
   hs-source-dirs: bench
+  ghc-options: -Wall -O2 -rtsopts -fno-warn-unticked-promoted-constructors
 
   main-is: Static.hs
   type: exitcode-stdio-1.0
 
   other-modules: SortedVec
-  build-depends:
-                base                    ^>= 4.14.1.0
-              , thunderkv
-              , criterion               ^>= 1.5.9
-              -- , tasty-bench             >= 0.2
-              , random                  ^>= 1.2
-              , vector
-              , deepseq
-              , mtl
-              , containers              ^>= 0.6
-              -- , hgeometry-combinatorial
-
-  ghc-options: -Wall -O2 -rtsopts -fno-warn-unticked-promoted-constructors
-
-  default-language: Haskell2010
-  default-extensions: LambdaCase
-                    , FlexibleContexts
-                    , KindSignatures
-                    , GeneralizedNewtypeDeriving
-                    , StandaloneDeriving
-                    , DeriveFunctor
-                    , DeriveFoldable
-                    , DeriveTraversable
-                    , ViewPatterns
-                    , PatternSynonyms
-                    , TupleSections
-                    , RankNTypes
-                    , ConstraintKinds
-                    , DataKinds
-                    , FlexibleInstances
-                    , DeriveGeneric
+  build-depends: thunderkv
+               , criterion               ^>= 1.5.9
+               -- , tasty-bench             >= 0.2
+               , random                  ^>= 1.2
+               , vector
+               , mtl
+               -- , hgeometry-combinatorial
