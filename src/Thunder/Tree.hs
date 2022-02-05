@@ -23,7 +23,7 @@ module Thunder.Tree
 
   , Index
   , Node
-  , WithMax
+  , WithMax, WithMaxAdapt(..)
 
   , Height, Size
 
@@ -85,20 +85,18 @@ deriving instance (Eq a, Eq b, Eq (v (Node a b)))       => Eq (GTree l v a b)
 
 instance NFData (v (Node a b)) => NFData (GTree l v a b)
 
-instance Functor v => Bifunctor (GTree l v) where
-  bimap f g (Tree v) = Tree $ fmap (bimap f g) v
 
 
 
 
 
 -- | Convert into a BinTree
-toBinTree :: GV.Vector v (Node a b) => GTree l v a b -> BinTree a b
+toBinTree :: (GV.Vector v (Node a b), DestructNode a b) => GTree l v a b -> BinTree a b
 toBinTree (Tree t) = go 0
   where
-    go i = case t GV.! fromIntegral i of
-             Leaf x     -> BinLeaf x
-             Node l k r -> BinNode (go l) k (go r)
+    go i = destructNode (t GV.! fromIntegral i)
+             (\x     -> BinLeaf x)
+             (\l k r -> BinNode (go l) k (go r))
 
 -- | Get the number of nodes in the tree
 numNodes          :: GV.Vector v (Node a b) => GTree l v a b -> Int
@@ -114,9 +112,10 @@ numLeaves t = (numNodes t + 1) `div` 2
 -- not have.
 bimapTree              :: ( GV.Vector v (Node a b)
                           , GV.Vector v (Node c d)
+                          , DestructNode a b, ConstructNode c d
                           )
                        => (a -> c) -> (b -> d) -> GTree l v a b -> GTree l v c d
-bimapTree f g (Tree v) = Tree $ GV.map (bimap f g) v
+bimapTree f g (Tree v) = Tree $ GV.map (bimapNode f g) v
 
 
 {-
@@ -153,37 +152,42 @@ bimapTree f g (Tree v) = Tree $ GV.map (bimap f g) v
   FIXME: So far this reasons only about the "going up" part. Not about the "going down" part.
 
 -}
-biTraverseTreeWithIndex                    :: (GV.Vector v (Node a b), Monad f)
+biTraverseTreeWithIndex                    :: ( GV.Vector v (Node a b)
+                                              , DestructNode a b
+                                              , Monad f
+                                              )
                                            => (Index -> Index -> c -> a -> Index -> c -> f c)
                                            -> (Index -> b -> f c)
                                            -> GTree l v a b -> f c
-biTraverseTreeWithIndex node leaf (Tree v) = go 0
+biTraverseTreeWithIndex node' leaf' (Tree v) = go 0
   where
-    go i = case v GV.! fromIntegral i of
-             Leaf x     -> leaf i x
-             Node l k r -> do l' <- go l
-                              r' <- go r
-                              node i l l' k r r'
+    go i = destructNode (v GV.! fromIntegral i)
+             (\x     -> leaf' i x)
+             (\l k r -> do l' <- go l
+                           r' <- go r
+                           node' i l l' k r r')
 
-biTraverseTree                :: (GV.Vector v (Node a b), Monad f)
+biTraverseTree                :: (GV.Vector v (Node a b), DestructNode a b, Monad f)
                               => (c -> a -> c -> f c) -> (b -> f c) -> GTree l v a b -> f c
 biTraverseTree node leaf =
   biTraverseTreeWithIndex (\_ _ l k _ r -> node l k r) (const leaf)
 
 
-bifoldTree                    :: GV.Vector v (Node a b)
+bifoldTree                    :: (GV.Vector v (Node a b), DestructNode a b)
                               => (c -> a -> c -> c) -> (b -> c) -> GTree l v a b -> c
 bifoldTree node leaf = runIdentity
                      . biTraverseTree (\l k r -> Identity $ node l k r) (Identity . leaf)
 
-instance Bifoldable (Tree l) where
-  bifoldMap f = bifoldTree (\l k r -> l <> f k <> r)
+-- instance Bifoldable (Tree l) where
+--   bifoldMap f = bifoldTree (\l k r -> l <> f k <> r)
 
 
 
 biTraverseTreeM                     :: forall v w a b c d m l.
                                        ( GV.Vector v (Node a b)
                                        , GV.Vector w (Node c d)
+                                       , DestructNode a b
+                                       , ConstructNode c d
                                        , PrimMonad m
                                        )
                                     => (Index -> c -> a -> c -> m c)
@@ -196,10 +200,10 @@ biTraverseTreeM                     :: forall v w a b c d m l.
                                    -> (d -> m c) -- ^ function to lift d's into cs
                                    -> GTree l v a b
                                    -> m (GTree l w c d)
-biTraverseTreeM node leaf liftCD t = do w <- GVM.new (fromIntegral n)
-                                        _ <- biTraverseTreeWithIndex (node' w) (leaf' w) t
-                                        -- discarded result is the c at the root.
-                                        Tree <$> GV.unsafeFreeze w
+biTraverseTreeM node' leaf' liftCD t = do w <- GVM.new (fromIntegral n)
+                                          _ <- biTraverseTreeWithIndex (node'' w) (leaf'' w) t
+                                          -- discarded result is the c at the root.
+                                          Tree <$> GV.unsafeFreeze w
   where
     -- leaf' :: Index -> b -> m (Node c d)
     -- leaf' i b = Leaf <$> leaf i b
@@ -207,13 +211,13 @@ biTraverseTreeM node leaf liftCD t = do w <- GVM.new (fromIntegral n)
     -- node' :: Index -> Index -> c -> a -> Index -> c -> m (Node c d)
     -- node' i li l k ri r = (\c' -> Node li c' ri) <$> node i l k r
 
-    leaf' w i b = do d <- leaf i b
-                     GVM.write w (fromIntegral i) $ Leaf d
-                     liftCD d
+    leaf'' w i b = do d <- leaf' i b
+                      GVM.write w (fromIntegral i) $ leaf d
+                      liftCD d
 
-    node' w i li l k ri r = do c <- node i l k r
-                               GVM.write w (fromIntegral i) $ Node li c ri
-                               pure c
+    node'' w i li l k ri r = do c <- node' i l k r
+                                GVM.write w (fromIntegral i) $ node li c ri
+                                pure c
 
     n = numNodes t
 
@@ -243,22 +247,21 @@ biTraverseTreeM node leaf liftCD t = do w <- GVM.new (fromIntegral n)
 -- * Traversals
 
 -- | Get the values in the leaves in ascending order.
-leaves          :: (GV.Vector v (Node a b), GV.Vector v b) => GTree l v a b -> v b
-leaves (Tree t) = GV.mapMaybe (\case
-                                  Leaf x -> Just x
-                                  _      -> Nothing) t
+leaves          :: (GV.Vector v (Node a b), DestructNode a b, GV.Vector v b)
+                => GTree l v a b -> v b
+leaves (Tree t) = GV.mapMaybe (\n -> destructNode n Just (\_ _ _ -> Nothing)) t
 
 --------------------------------------------------------------------------------
 -- * Querying
 
 -- | Binary-search on a tree. the predicate indicates if we should go right
-searchLeafR                  :: GV.Vector v (Node a b) => (a -> Bool) -> GTree l v a b -> b
+searchLeafR                  :: (GV.Vector v (Node a b), DestructNode a b)
+                             => (a -> Bool) -> GTree l v a b -> b
 searchLeafR goRight (Tree t) = go 0
   where
-    go i = case t GV.! fromIntegral i of
-             Leaf v       -> v
-             Node li k ri -> if goRight k then go ri else go li
-
+    go i = destructNode  (t GV.! fromIntegral i)
+             (\v       -> v)
+             (\li k ri -> if goRight k then go ri else go li)
 
 
 -- -- | Find the strict successor of k, if it exists
@@ -289,6 +292,10 @@ searchLeafR goRight (Tree t) = go 0
 --------------------------------------------------------------------------------
 -- * Filling Binary Search Trees
 
+
+
+
+
 -- | Given a leaf to value function, an ascending list of elements xs,
 -- and a tree t, create a BST by overwriting all values in the BST.
 --
@@ -296,9 +303,12 @@ searchLeafR goRight (Tree t) = go 0
 reFillWith      :: ( GV.Vector v (Node a b)
                    , GV.Vector w (Node (WithMax c) d)
                    , GV.Vector w (Node c d)
+                   , DestructNode (WithMax c) d, DestructNode a b
+                   , ConstructNode c d, ConstructNode (WithMax c) d
+                   , WithMaxAdapt c
                    )
                 => (d -> c) -> [d] -> GTree l v a b -> GTree l w c d
-reFillWith f xs = bimapTree (\(WithMax x _) -> x) id . fillWith f xs
+reFillWith f xs = bimapTree theValue id . fillWith f xs
 
 -- | Given a leaf to key function and a list of leaf values,
 -- "overwrite" the values in the input tree by those in the input list
@@ -309,41 +319,56 @@ reFillWith f xs = bimapTree (\(WithMax x _) -> x) id . fillWith f xs
 -- structure/memory layout.
 fillWith   :: ( GV.Vector v (Node a b)
               , GV.Vector w (Node (WithMax c) d)
+              , DestructNode a b, ConstructNode (WithMax c) d
+              , WithMaxAdapt c
               )
            => (d -> c) -> [d] -> GTree l v a b -> GTree l w (WithMax c) d
-fillWith f = fillWith' (\(WithMax _ lM) _ (WithMax _ rM) -> WithMax lM rM)
+fillWith f = fillWith' (\lM _ rM -> withMax (theMaximum lM) (theMaximum rM))
                        (\d _ -> d)
-                       (\d -> let c = f d in WithMax c c)
+                       (\d -> let c = f d in withMax c c)
 
-data WithMax c = WithMax {-# UNBOX #-} !c
-                         {-# UNBOX #-} !c -- the maximum
-               deriving stock (Show,Eq,Ord,Generic)
-               deriving anyclass (GStorable)
+
+class WithMaxAdapt c where
+  data WithMax c
+  withMax :: c -> c -> WithMax c
+  destructMax :: WithMax c -> (c -> c -> b) -> b
+
+theMaximum :: WithMaxAdapt c => WithMax c -> c
+theMaximum = flip destructMax (\_ m -> m)
+
+theValue :: WithMaxAdapt c => WithMax c -> c
+theValue = flip destructMax (\x _ -> x)
+
+-- data WithMax c = WithMax {-# UNPACK #-} !c
+--                          {-# UNPACK #-} !c -- the maximum
+--                deriving stock (Show,Eq,Ord,Generic)
+--                deriving anyclass (GStorable)
 
 type SST s cs = StateT cs (ST s)
 
 -- | More general version of fillWith that allows us to specify how to
 -- construct a node, how to create a leaf, and how to lift a leaf into
 -- a c.
-fillWith'                  :: forall v w a b c d x l.
-                           ( GV.Vector v (Node a b)
-                           , GV.Vector w (Node c d)
-                           )
-                          => (c -> a -> c -> c) -- ^ node combinator
-                          -> (x -> b -> d)      -- ^ leaf builder
-                          -> (d -> c)           -- ^ lift a leaf into c
-                          -> [x]
-                          -> GTree l v a b -> GTree l w c d
-fillWith' node leaf f xs t = runST (flip evalStateT xs $ biTraverseTreeM node' leaf' lift' t)
+fillWith'                    :: forall v w a b c d x l.
+                                ( GV.Vector v (Node a b)
+                                , GV.Vector w (Node c d)
+                                , DestructNode a b, ConstructNode c d
+                                )
+                             => (c -> a -> c -> c) -- ^ node combinator
+                             -> (x -> b -> d)      -- ^ leaf builder
+                             -> (d -> c)           -- ^ lift a leaf into c
+                             -> [x]
+                             -> GTree l v a b -> GTree l w c d
+fillWith' node' leaf' f xs t = runST (flip evalStateT xs $ biTraverseTreeM node'' leaf'' lift' t)
   where
-    node'         :: Index -> c -> a -> c -> SST s [x] c
-    node' _ l a r = pure $ node l a r
+    node''         :: Index -> c -> a -> c -> SST s [x] c
+    node'' _ l a r = pure $ node' l a r
 
-    leaf'     :: Index -> b -> SST s [x] d
-    leaf' _ b = get >>= \case
+    leaf''     :: Index -> b -> SST s [x] d
+    leaf'' _ b = get >>= \case
                   []      -> error "fillWith: too few elements"
                   (x:xs') -> do put xs'
-                                pure $ leaf x b
+                                pure $ leaf' x b
 
     lift' :: d -> SST s [x] c
     lift' = pure . f
@@ -351,7 +376,7 @@ fillWith' node leaf f xs t = runST (flip evalStateT xs $ biTraverseTreeM node' l
 --------------------------------------------------------------------------------
 -- * Debugging
 
-printTree :: (Show a, Show b) => Tree l a b -> IO ()
+printTree :: (Show a, Show b, DestructNode a b) => Tree l a b -> IO ()
 printTree = TreeView.drawTree . convert . toBinTree
   where
     convert (BinLeaf x) = DataTree.Node (show x) []

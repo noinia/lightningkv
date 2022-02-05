@@ -15,11 +15,14 @@ module Thunder.Prokob
 import           Control.Exception (assert)
 import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Storable as SV
+import           Foreign.Storable.Generic
+import           GHC.Generics
 import           Math.NumberTheory.Logarithms (intLog2')
 import           Thunder.Node
 import           Thunder.Tree
 import           Thunder.WithInfty
 
+import           Thunder.KeyValueInstances
 --------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
@@ -29,6 +32,9 @@ import           Thunder.WithInfty
 fromAscListNWith     ::
                      ( GV.Vector v (Node (WithInfty a) (WithInfty b))
                      , GV.Vector v (Node (WithMax (WithInfty a)) (WithInfty b))
+                     , NodeAdapt  (WithMax (WithInfty a)) (WithInfty b)
+                     , ConstructNode (WithInfty a) (WithInfty b)
+                     , WithMaxAdapt (WithInfty a)
                      )
                      => (b -> a) -> Size -> [b] -> GTree VEB v (WithInfty a) (WithInfty b)
 fromAscListNWith f n = let h = lg n in uncurry (layoutWith (fmapWithInfty f)) . padToNextPower h n
@@ -37,6 +43,9 @@ fromAscListNWith f n = let h = lg n in uncurry (layoutWith (fmapWithInfty f)) . 
 -- VEB layout.
 fromAscListN :: ( GV.Vector v (Node (WithInfty a) (WithInfty a))
                 , GV.Vector v (Node (WithMax (WithInfty a)) (WithInfty a))
+                , NodeAdapt (WithMax (WithInfty a)) (WithInfty a)
+                , ConstructNode (WithInfty a) (WithInfty a)
+                , WithMaxAdapt (WithInfty a)
                 )
              => Size -> [a] -> GTree VEB v (WithInfty a) (WithInfty a)
 fromAscListN = fromAscListNWith id
@@ -50,12 +59,18 @@ fromAscListN = fromAscListNWith id
 layoutWith        :: forall v a b.
                      ( GV.Vector v (Node a b)
                      , GV.Vector v (Node (WithMax a) b)
+                     , NodeAdapt (WithMax a) b, ConstructNode a b
+                     , WithMaxAdapt a
                      )
                   => (b -> a) -> Height -> [b] -> GTree VEB v a b
 layoutWith f h xs = reFillWith f xs $ create @SV.Vector h
 
 -- | Lay out 2^h values in a BST in VEB layout.
-layout :: Height -> [b] -> Tree VEB b b
+layout :: ( DestructNode (WithMax b) b
+          , ConstructNode (WithMax b) b
+          , ConstructNode b b
+          , WithMaxAdapt b
+          ) => Height -> [b] -> Tree VEB b b
 layout = layoutWith id
 
 --------------------------------------------------------------------------------
@@ -66,15 +81,30 @@ create h = Tree . GV.fromListN n . create' $ h
   where
     n = fromIntegral $ size h
 
+
+data instance Node () () = LeafUnit | NodeUnit {-# UNPACK #-} !Index
+                                               {-# UNPACK #-} !Index
+                         deriving stock    (Show,Eq,Generic)
+                         deriving anyclass (GStorable)
+
+instance ConstructNode () () where
+  leaf _ = LeafUnit
+  node l _ r = NodeUnit l r
+instance DestructNode () () where
+  destructNode n f g = case n of
+                         LeafUnit     -> f ()
+                         NodeUnit l r -> g l () r
+
 type Nodes = [Node () ()]
-data PartialTree = PartialTree { startingIndex :: !Index
+
+data PartialTree = PartialTree { startingIndex :: {-# UNPACK #-} !Index
                                , subTreeNodes  :: Nodes
                                } deriving (Show,Eq)
 
 -- | Implementation of create
 create'   :: Height -> Nodes
 create' h = case h of
-    0 -> [Leaf ()]
+    0 -> [LeafUnit]
     _ | h == m*2  -> let top    = create' (m-1)
                          bottom = create' m     in create'' top bottom (m-1) m
       | otherwise -> let top    = create' m     in create'' top top m m
@@ -113,11 +143,14 @@ connect             :: Nodes -- ^ top
                     -> Nodes
 connect top bottoms = f bottoms top
   where
-    f bs []               = assert (null bs) []
-    f bs (n@Node {}:top') = n : f bs top'
-    f bs (Leaf _ : top')  = case bs of
-      ( PartialTree il _ : PartialTree ir _ : bs') -> Node il () ir : f bs' top'
-      _                                            -> error "connect: too few bottoms!?"
+    f bs []       = assert (null bs) []
+    f bs (n:top') = destructNode n
+           (\_ -> case bs of -- leaf case
+                    PartialTree il _ : PartialTree ir _ : bs' -> node il () ir : f bs' top'
+                    _                                         -> error "connect: too few bottoms!?"
+
+           )
+           (\ _ _ _ -> n : f bs top') -- node case
 
 -- | shifts a subtree by startOffset + i*size
 shiftBy                       :: Index -> Index -> Nodes -> Word -> PartialTree
@@ -125,9 +158,9 @@ shiftBy startOffSet size' t i = PartialTree offSet (fmap f t)
   where
     offSet = startOffSet + i*size'
 
-    f nd = case nd of
-             Leaf _     -> nd
-             Node l k r -> Node (l+offSet) k (r+offSet)
+    f nd = destructNode nd
+             (\_     -> nd)
+             (\l k r -> node (l+offSet) k (r+offSet))
 
 
 --------------------------------------------------------------------------------
@@ -162,10 +195,14 @@ numLeavesFromHeight = pow2
 
 --------------------------------------------------------------------------------
 
-testTree' :: Height -> Tree VEB Word Word
+testTree' :: Height -> Tree VEB Key Key
 testTree' h = layout h [0..(pow2 h-1)]
 
-testTree    :: [a] -> Tree VEB (WithInfty a) (WithInfty a)
+testTree    :: ( NodeAdapt (WithMax (WithInfty a)) (WithInfty a)
+               , ConstructNode (WithInfty a) (WithInfty a)
+               , WithMaxAdapt (WithInfty a)
+               )
+            => [a] -> Tree VEB (WithInfty a) (WithInfty a)
 testTree xs = fromAscListN (length xs) xs
 
 printTestTree :: Height -> IO ()

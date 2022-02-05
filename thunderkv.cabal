@@ -70,6 +70,7 @@ library
                    Thunder.Map.Storable
                    Thunder.Map.Boxed
                    Thunder.Map.Base
+                   Thunder.KeyValueInstances
 
   other-modules:   Thunder.Node
                    Thunder.KeyValue
