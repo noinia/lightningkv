@@ -64,17 +64,17 @@ library
   ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
   hs-source-dirs: src
   exposed-modules: Thunder.Tree
-                   Thunder.Prokob
-                   Thunder.BinTree
-                   Thunder.Map
-                   Thunder.Map.Storable
-                   Thunder.Map.Boxed
-                   Thunder.Map.Base
-                   Thunder.KeyValueInstances
+                   -- Thunder.Prokob
+                   -- Thunder.BinTree
+                   -- Thunder.Map
+                   -- Thunder.Map.Storable
+                   -- Thunder.Map.Boxed
+                   -- Thunder.Map.Base
+                   -- Thunder.KeyValueInstances
 
-  other-modules:   Thunder.Node
-                   Thunder.KeyValue
-                   Thunder.WithInfty
+  -- other-modules:   Thunder.Node
+  --                  Thunder.KeyValue
+  --                  Thunder.WithInfty
 
   build-depends:
                    , bifunctors              ^>= 5.5
@@ -111,19 +111,19 @@ test-suite doctests
                , QuickCheck
                , quickcheck-instances
 
-benchmark bench
-  import: common-build-depends, default-compiler-options
-  hs-source-dirs: bench
-  ghc-options: -Wall -O2 -rtsopts -fno-warn-unticked-promoted-constructors
+-- benchmark bench
+--   import: common-build-depends, default-compiler-options
+--   hs-source-dirs: bench
+--   ghc-options: -Wall -O2 -rtsopts -fno-warn-unticked-promoted-constructors
 
-  main-is: Static.hs
-  type: exitcode-stdio-1.0
+--   main-is: Static.hs
+--   type: exitcode-stdio-1.0
 
-  other-modules: SortedVec
-  build-depends: thunderkv
-               , criterion               ^>= 1.5.9
-               -- , tasty-bench             >= 0.2
-               , random                  ^>= 1.2
-               , vector
-               , mtl
-               -- , hgeometry-combinatorial
+--   other-modules: SortedVec
+--   build-depends: thunderkv
+--                , criterion               ^>= 1.5.9
+--                -- , tasty-bench             >= 0.2
+--                , random                  ^>= 1.2
+--                , vector
+--                , mtl
+--                -- , hgeometry-combinatorial
