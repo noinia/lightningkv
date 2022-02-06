@@ -20,55 +20,15 @@ import           Foreign.Storable.Generic
 import           GHC.Generics
 import           Math.NumberTheory.Logarithms (intLog2')
 import           Prelude hiding (lookup,elem)
+import           Thunder.Index
+import           Thunder.Node
+
 --------------------------------------------------------------------------------
 
-type Key = Int
-
-
-newtype Index v = Index Int
-  deriving stock (Show,Eq,Ord,Generic)
-  deriving newtype (Storable,NFData)
-
-deriving newtype instance Storable (Min Key)
-deriving newtype instance Storable (Max Key)
-
-type NodeProperties a = (Show a, GStorable a, Eq a, NFData a)
-
-class NodeProperties (Node a) => HasNode a where
-  -- ^ invariant: key of the node is max left subtree
-  data Node a
-  leaf :: Key -> a -> Node a
-  node :: Index (Node a) -> Min Key -> Key -> Max Key -> Index (Node a) -> Node a
-
-  caseNode :: Node a -> (Key -> a -> r)
-                     -> (Index (Node a) -> Min Key -> Key -> Max Key -> Index (Node a) -> r)
-                     -> r
-
--- | flipped version of caseNode with the Node as last argument.
-destructNode               :: HasNode a => (Key -> a -> r)
-                           -> (Index (Node a) -> Min Key -> Key -> Max Key -> Index (Node a) -> r)
-                           -> Node a
-                           -> r
-destructNode leaf' node' n = caseNode n leaf' node'
-
-minKey :: HasNode a => Node a -> Min Key
-minKey = destructNode (\k _        -> Min k)
-                      (\_ mi _ _ _ -> mi)
-
-maxKey :: HasNode a => Node a -> Max Key
-maxKey = destructNode (\k _        -> Max k)
-                      (\_ _ _ ma _ -> ma)
-
-
--- instance Functor Node where
---   fmap f = \case
---     Leaf k v         -> Leaf k (f v)
---     Node l mi k ma r -> Node l mi k ma r
 
 type SubTree layout a = SV.Vector (Node a)
 type Size = Int
 
-data VEB
 
 -- deletions may shrink the acctual size
 data Tree layout a = Tree {-# UNPACK #-} !Size
@@ -86,108 +46,15 @@ deriving anyclass instance NFData (Tree layout a)
 
 --------------------------------------------------------------------------------
 
-data KeyMap v = KeyMap (Tree VEB (Index v))
-                       (SV.Vector v)
-              deriving (Show,Eq)
-
 
 --------------------------------------------------------------------------------
 
--- |
--- pre: input has length 2^h for some h, keys are in increasing order, No duplicate keys
-fromAscList    :: (Foldable f, HasNode a) => f (Key,a) -> Tree VEB a
-fromAscList xs = fromAscListN (F.length xs) xs
-
--- |
--- pre: input has length 2^h for some h, keys are in increasing order, No duplicate keys
-fromAscListN      :: (Foldable f, HasNode a) => Size -> f (Key,a) -> Tree VEB a
-fromAscListN n xs = fillUp (F.toList xs) $ create n
 
 type Height = Int
 
--- | creates a tree of size 2^h with keys [0,..,2^h]. The nodes contain all zeros
-create   :: Size -> Tree VEB Key
-create n = Tree n . SV.fromListN (size' h) $ create' h
-  where
-    h = lg n
-
-
-testTree   :: Key -> Tree VEB Key
-testTree n = fromAscList . map (\x -> (x,x)) $ [0..(n-1)]
 
 --------------------------------------------------------------------------------
 
-type Nodes = [Node Key]
-
-data PartialTree = PartialTree { startingIndex :: {-# UNPACK #-} !(Index Key)
-                               , subTreeNodes  :: Nodes
-                               } deriving (Show,Eq)
-
-
--- | Implementation of create
-create'   :: Height -> Nodes
-create' h = case h of
-    0 -> [leaf 0 0]
-    _ | h == m*2  -> let top    = create' (m-1)
-                         bottom = create' m     in create'' top bottom (m-1) m
-      | otherwise -> let top    = create' m     in create'' top top m m
-  where
-    m = h `div` 2
-
--- | second helper for create.
---
--- main idea is to clone the bottom tree, and then connect the top
--- tree to the clones appropriately.
---
-create''                  :: Nodes -- ^ top
-                          -> Nodes -- ^ bottom
-                          -> Height -- ^ height of the top tree
-                          -> Height -- ^ height of the bottom tree
-                          -> Nodes
-create'' top bottom th bh = top' <> concatMap subTreeNodes bottoms
-  where
-    top' = connect top bottoms
-
-    bottoms  = map (shiftBy sizeTop sizeBottom bottom) bottoms'
-    bottoms' = [0..(numBottoms-1)]
-
-    numBottoms   = 2 * numLeavesFromHeight th
-
-    sizeTop      = size' th
-    sizeBottom   = size' bh
-
--- ^ connect the top part with the bottoms by replacing all leaves in top with
--- nodes to the appropriate indices of the bottom roots
-connect             :: Nodes -- ^ top
-                    -> [PartialTree] -- ^ bottoms
-                    -> Nodes
-connect top bottoms = f bottoms top
-  where
-    f bs []       = assert (null bs) []
-    f bs (n:top') = caseNode n
-           (\_ _ -> case bs of -- leaf case
-                      PartialTree il _ : PartialTree ir _ : bs' ->
-                        node (coerce il) (Min 0) 0 (Max 0) (coerce ir) : f bs' top'
-                      _                                         ->
-                        error "connect: too few bottoms!?"
-
-           )
-           (\ _ _ _ _ _ -> n : f bs top') -- node case
-
-
--- | shifts a subtree by startOffset + i*size
-shiftBy                       :: Int -- starting offset
-                              -> Size -- the size
-                              -> Nodes -- the nodes
-                              -> Int --
-                              -> PartialTree
-shiftBy startOffSet size'' t i = PartialTree (Index offSet) (fmap f t)
-  where
-    offSet = startOffSet + i*size''
-
-    f nd = caseNode nd
-             (\_ _                         -> nd)
-             (\(Index l) mi k ma (Index r) -> node (Index $ l+offSet) mi k ma (Index $ r+offSet))
 
 --------------------------------------------------------------------------------
 
@@ -358,30 +225,6 @@ delete = undefined
 -- rebuilds the tree if we halve its size
 
 --------------------------------------------------------------------------------
-
-instance HasNode Int where
-  data Node Int = LeafInt {-# UNPACK #-} !Key
-                          {-# UNPACK #-} !Int
-                | NodeInt {-# UNPACK #-} !(Index (Node Int))
-                          {-# UNPACK #-} !(Min Key)
-                          {-# UNPACK #-} !Key
-                          {-# UNPACK #-} !(Max Key)
-                          {-# UNPACK #-} !(Index (Node Int))
-                deriving stock (Show,Eq,Generic)
-                deriving anyclass (GStorable,NFData)
-  leaf = LeafInt
-  node = NodeInt
-  caseNode n leaf' node' = case n of
-                             LeafInt k v         -> leaf' k v
-                             NodeInt l mi k ma r -> node' l mi k ma r
-
-
-instance HasNode (Index v) where
-  newtype Node (Index v) = MkNodeIndex (Node Int)
-                         deriving newtype (Show,Eq,Generic,GStorable,NFData)
-  leaf k (Index v) = coerce $ leaf k v
-  node = coerce node
-  caseNode (MkNodeIndex n) leaf' node' = caseNode n (coerce leaf') (coerce node')
 
 --------------------------------------------------------------------------------
 

@@ -64,12 +64,14 @@ library
   ghc-options: -O -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
   hs-source-dirs: src
   exposed-modules: Thunder.Tree
-                   -- Thunder.Prokob
+                   Thunder.Node
+                   Thunder.Index
+                   Thunder.Prokob
                    -- Thunder.BinTree
-                   -- Thunder.Map
+                   Thunder.Map
                    -- Thunder.Map.Storable
                    -- Thunder.Map.Boxed
-                   -- Thunder.Map.Base
+                   Thunder.Map.KeyMap
                    -- Thunder.KeyValueInstances
 
   -- other-modules:   Thunder.Node

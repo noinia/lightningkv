@@ -17,7 +17,7 @@ genAscList h = (\xs -> (n,scanl1 (+) xs)) <$> replicateM n (randomRIO (0,10))
     n = pow2 h
 
 
-buildMap    :: FilePath -> IO (Map.Map Int Int)
+buildMap    :: FilePath -> IO (Map.KeyMap Int)
 buildMap fp = do (n:xs) <- map read . lines <$> readFile fp
                  let ys = map (\x -> (x,x)) xs
                  pure $ Map.fromAscListN n ys
