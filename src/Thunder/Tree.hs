@@ -99,6 +99,106 @@ fromAscListN      :: Foldable f => Size -> f (Key,a) -> Tree layout a
 fromAscListN n xs = undefined
 
 
+-- -- | pre: the keys are given in ascending order, the tree has the right size
+-- -- size is 2^h
+-- fillUp                     :: f (Key, a) -> Tree b -> Tree a
+-- fillUp xs (Tree s subTree) = go root
+--   where
+--     go ::
+
+-- traverseLeavesL'                      :: forall f a b.
+--                                          ( Applicative f
+--                                          , HasNode a, HasNode b
+--                                          )
+--                                       => (Key -> a -> f Key)
+--                                       -> (Key -> a -> f b)
+--                                       -> Tree layout a
+--                                       -> f (SVector (Node b))
+-- traverseLeavesL' f g (Tree s subTree) = Tree s <$> go0 root
+--   where
+--     go   :: Index (Node a) -> f (Node b)
+--     go i = caseNode (subTree ! i)
+--                     (\k v -> leaf <$> f k v <*> g k v)
+--                     (\l mi k ma r -> pure $ (coerce node) l mi k ma r)
+
+
+--     go0 = SV.createT $ do subTree' <- SMV.unsafeNew (SV.length subTree)
+
+
+
+fixBottomUp             :: forall a b. (HasNode a, HasNode b)
+                        => SV.Vector (Node a)
+                        -> (Key -> a -> Key)
+                        -> (Key -> a -> b)
+                        -> SubTree VEB b
+fixBottomUp subTree f g = SV.create $ do subTree' <- SMV.unsafeNew (SV.length subTree)
+                                         _ <- fixUp subTree'
+                                         pure subTree'
+  where
+    fixUp            :: forall m. PrimMonad m
+                     => SMV.MVector (PrimState m) (Node b) -> m (Min Key, Max Key)
+    fixUp subTree' = go root
+      where
+        go i = caseNode (subTree ! i)
+                       (\k v       -> leaf' k v)
+                       (\l _ _ _ r -> do (mi,Max k) <- go l
+                                         (_, ma)    <- go r
+                                         node' l mi k ma r
+                       )
+          where
+            leaf'             :: Key -> a -> m (Min Key, Max Key)
+            leaf' k v         = (Min k, Max k)
+                                <$ SMV.write subTree' (coerce i)
+                                                      (leaf (f k v) (g k v))
+            node'             :: Index (Node a)
+                              -> Min Key -> Key -> Max Key
+                              -> Index (Node a)
+                              -> m (Min Key, Max Key)
+            node' l mi k ma r = (mi,ma)
+                                <$ SMV.write subTree' (coerce i)
+                                                      (node (coerce l) mi k ma (coerce r))
+
+
+-- fixBottomUp         :: forall b. HasNode b => SV.Vector (Node b) -> SubTree VEB b
+-- fixBottomUp subTree = SV.create $ do subTree' <- SMV.unsafeNew (SV.length subTree)
+--                                      _ <- fixUp subTree'
+--                                      pure subTree'
+--   where
+--     fixUp            :: PrimMonad m => SMV.MVector (PrimState m) (Node b) -> m (Min Key, Max Key)
+--     fixUp subTree' = go root
+--       where
+--         go i = caseNode (subTree ! i)
+--                        (\k v       -> leaf' k v)
+--                        (\l _ _ _ r -> do (mi,Max k) <- go l
+--                                          (_, ma)    <- go r
+--                                          node' l mi k ma r
+--                        )
+--           where
+--             leaf' k v         = (Min k, Max k) <$ SMV.write subTree' (coerce i) (leaf k v)
+--             node' l mi k ma r = (mi,ma)        <$ SMV.write subTree' (coerce i) (node l mi k ma r)
+
+
+
+-- traverseWithKeyInOrder                      :: forall f a b.
+--                                                ( Applicative f
+--                                                , HasNode a, HasNode b
+--                                                )
+--                                             => (Key -> a -> f Key)
+--                                             -> (Key -> a -> f b) -> Tree a -> f (Tree b)
+-- traverseWithKeyInOrder f g (Tree s subTree) = Tree s <$> createT go0
+--   where
+--     -- go :: forall s. Index (Node a) -> ST s (f (Node b)
+--     go0 = do subTree' <- SMV.unsafeNew (SV.length subTree)
+--              go subTree' root
+
+--     go subTree' i = caseNode (subTree ! i)
+--                              (\k v         -> leaf <$> f k v <*> g k v)
+--                              (\l mi k ma r ->
+--                              )
+
+
+
+
 elems :: HasNode a => Tree layout a -> [(Key, a)]
 elems = toAscList
 
