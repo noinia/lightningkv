@@ -1,19 +1,15 @@
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# OPTIONS_GHC -fplugin=Foreign.Storable.Generic.Plugin #-}
 {-# OPTIONS_GHC -fplugin-opt=Foreign.Storable.Generic.Plugin:-v2 #-}
 module Thunder.Tree where
 
 import           Control.DeepSeq
-import           Control.Exception (assert)
 import           Control.Monad (void)
 import           Control.Monad.Primitive
 import           Control.Monad.Trans.State
 import           Data.Coerce
-import qualified Data.Foldable as F
 import           Data.Maybe
 import           Data.Semigroup
-import qualified Data.Vector.Generic as GV
 import qualified Data.Vector.Storable as SV
 import qualified Data.Vector.Storable.Mutable as SMV
 import           Foreign.Storable.Generic
@@ -92,7 +88,7 @@ traverseBottomUpM subTree subTree' f g = void $ go root
     -- tree, and maintaining the subtree Min and Max'es
     go   :: Index (Node a) -> m (Min Key, Max Key)
     go i = caseNode (subTree ! i)
-                    (\k a       -> leaf' k a)
+                    leaf'
                     (\l _ _ _ r -> do (mi,Max k) <- go l
                                       (_, ma)    <- go r
                                       node' l mi k ma r
