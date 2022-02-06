@@ -136,9 +136,11 @@ fixBottomUp subTree f g = SV.create $ do subTree' <- SMV.unsafeNew (SV.length su
                                          pure subTree'
   where
     fixUp            :: forall m. PrimMonad m
-                     => SMV.MVector (PrimState m) (Node b) -> m (Min Key, Max Key)
+                     => SMV.MVector (PrimState m) (Node b)
+                     -> m (Min Key, Max Key)
     fixUp subTree' = go root
       where
+        go   :: Index (Node a) -> m (Min Key, Max Key)
         go i = caseNode (subTree ! i)
                        (\k v       -> leaf' k v)
                        (\l _ _ _ r -> do (mi,Max k) <- go l
