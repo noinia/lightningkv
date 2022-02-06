@@ -1,4 +1,4 @@
-write-ghc-environment-files: always
+-- write-ghc-environment-files: always
 tests: false
 benchmarks: true
 packages: *

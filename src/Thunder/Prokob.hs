@@ -35,6 +35,7 @@ fromAscListNWith     ::
                      , NodeAdapt  (WithMax (WithInfty a)) (WithInfty b)
                      , ConstructNode (WithInfty a) (WithInfty b)
                      , WithMaxAdapt (WithInfty a)
+                     , WithInftyAdapt b, WithInftyAdapt a
                      )
                      => (b -> a) -> Size -> [b] -> GTree VEB v (WithInfty a) (WithInfty b)
 fromAscListNWith f n = let h = lg n in uncurry (layoutWith (fmapWithInfty f)) . padToNextPower h n
@@ -45,7 +46,7 @@ fromAscListN :: ( GV.Vector v (Node (WithInfty a) (WithInfty a))
                 , GV.Vector v (Node (WithMax (WithInfty a)) (WithInfty a))
                 , NodeAdapt (WithMax (WithInfty a)) (WithInfty a)
                 , ConstructNode (WithInfty a) (WithInfty a)
-                , WithMaxAdapt (WithInfty a)
+                , WithMaxAdapt (WithInfty a), WithInftyAdapt a
                 )
              => Size -> [a] -> GTree VEB v (WithInfty a) (WithInfty a)
 fromAscListN = fromAscListNWith id
@@ -176,12 +177,12 @@ pow2 h = 2 ^ h
 ----------------------------------------
 
 -- | pad the length to be a power of two
-padToNextPower        :: Height -> Size -> [a] -> (Height, [WithInfty a])
+padToNextPower        :: WithInftyAdapt a => Height -> Size -> [a] -> (Height, [WithInfty a])
 padToNextPower h n xs | m == n    = (h, xs')
-                      | otherwise = (h+1, xs' <> replicate m Infty)
+                      | otherwise = (h+1, xs' <> replicate m infty)
   where
     m   = pow2 (h+1) - n
-    xs' = map Val xs
+    xs' = map nonInfty xs
 
 ----------------------------------------
 
@@ -198,12 +199,17 @@ numLeavesFromHeight = pow2
 testTree' :: Height -> Tree VEB Key Key
 testTree' h = layout h [0..(pow2 h-1)]
 
+
+
+
 testTree    :: ( NodeAdapt (WithMax (WithInfty a)) (WithInfty a)
                , ConstructNode (WithInfty a) (WithInfty a)
-               , WithMaxAdapt (WithInfty a)
+               , WithMaxAdapt (WithInfty a), WithInftyAdapt a
                )
             => [a] -> Tree VEB (WithInfty a) (WithInfty a)
 testTree xs = fromAscListN (length xs) xs
+
+
 
 printTestTree :: Height -> IO ()
 printTestTree h = printTree $ testTree' h
@@ -211,3 +217,5 @@ printTestTree h = printTree $ testTree' h
 
 printTreeOf :: Height -> IO ()
 printTreeOf = printTree . create
+
+foo = testTree ([1..5] :: [Key])

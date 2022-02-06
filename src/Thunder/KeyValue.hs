@@ -36,6 +36,7 @@ unKey (Key k) = toEnum k
 -- | Index that should return s.t. of type v
 newtype Index v = Index Node.Value deriving (Show,Eq,Ord,Storable,Prim,NFData) via Node.Value
 
+
 --------------------------------------------------------------------------------
 
 -- | Key values represented by unpacking their indices.
@@ -61,19 +62,19 @@ instance Ord (KeyValue k v) where
 
 --------------------------------------------------------------------------------
 
-data instance Node (Key k) (KeyValue k v) = LeafKV {-# UNPACK #-} !Node.Key
-                                                   {-# UNPACK #-} !Node.Value
-                                          | NodeKV {-# UNPACK #-} !Node.Index
-                                                   {-# UNPACK #-} !Node.Key
-                                                   {-# UNPACK #-} !Node.Index
-                                     deriving stock (Show,Eq,Ord,Generic)
-                                     deriving anyclass (GStorable)
-instance NFData (Node (Key k) (KeyValue k v))
+-- data instance Node (Key k) (KeyValue k v) = LeafKV {-# UNPACK #-} !Node.Key
+--                                                    {-# UNPACK #-} !Node.Value
+--                                           | NodeKV {-# UNPACK #-} !Node.Index
+--                                                    {-# UNPACK #-} !Node.Key
+--                                                    {-# UNPACK #-} !Node.Index
+--                                      deriving stock (Show,Eq,Ord,Generic)
+--                                      deriving anyclass (GStorable)
+-- instance NFData (Node (Key k) (KeyValue k v))
 
-instance ConstructNode (Key k) (KeyValue k v) where
-  leaf (KeyValue (Key k) (Index v)) = LeafKV k v
-  node l (Key k) r = NodeKV l k r
-instance DestructNode (Key k) (KeyValue k v) where
-  destructNode n f g = case n of
-                         LeafKV k v   -> f $ KeyValue (Key k) (Index v)
-                         NodeKV l k r -> g l (Key k) r
+-- instance ConstructNode (Key k) (KeyValue k v) where
+--   leaf (KeyValue (Key k) (Index v)) = LeafKV k v
+--   node l (Key k) r = NodeKV l k r
+-- instance DestructNode (Key k) (KeyValue k v) where
+--   destructNode n f g = case n of
+--                          LeafKV k v   -> f $ KeyValue (Key k) (Index v)
+--                          NodeKV l k r -> g l (Key k) r
