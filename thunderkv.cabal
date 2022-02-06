@@ -77,15 +77,15 @@ library
   --                  Thunder.WithInfty
 
   build-depends:
-                   , bifunctors              ^>= 5.5
-                   , primitive               ^>= 0.7.2.0
-                   , store                   ^>= 0.7
-                   , streamly                ^>= 0.8
-                   , tree-view               ^>= 0.5.1
-                   , vector                  ^>= 0.12
-                   , vector-mmap             ^>= 0.0.3
-                   , transformers            ^>= 0.5.6
-                   , integer-logarithms      ^>= 1.0
+                   , bifunctors              >= 5.5
+                   , primitive               >= 0.7.2.0
+                   , store                   >= 0.7
+                   , streamly                >= 0.8
+                   , tree-view               >= 0.5.1
+                   , vector                  >= 0.12
+                   , vector-mmap             >= 0.0.3
+                   , transformers            >= 0.5.6
+                   , integer-logarithms      >= 1.0
 
 executable thunderkv
     import: common-build-depends, default-compiler-options

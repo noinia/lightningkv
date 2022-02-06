@@ -5,8 +5,12 @@
 module Thunder.Tree where
 
 import           Control.DeepSeq
+import           Control.Exception (assert)
+import           Control.Monad (void)
 import           Control.Monad.Primitive
+import           Control.Monad.Trans.State
 import           Data.Coerce
+import qualified Data.Foldable as F
 import           Data.Maybe
 import           Data.Semigroup
 import qualified Data.Vector.Generic as GV
@@ -14,6 +18,7 @@ import qualified Data.Vector.Storable as SV
 import qualified Data.Vector.Storable.Mutable as SMV
 import           Foreign.Storable.Generic
 import           GHC.Generics
+import           Math.NumberTheory.Logarithms (intLog2')
 import           Prelude hiding (lookup,elem)
 --------------------------------------------------------------------------------
 
@@ -90,78 +95,163 @@ data KeyMap v = KeyMap (Tree VEB (Index v))
 
 -- |
 -- pre: input has length 2^h for some h, keys are in increasing order, No duplicate keys
-fromAscList :: Foldable f => f (Key,a) -> Tree layout a
-fromAscList = undefined
+fromAscList    :: (Foldable f, HasNode a) => f (Key,a) -> Tree VEB a
+fromAscList xs = fromAscListN (F.length xs) xs
 
 -- |
 -- pre: input has length 2^h for some h, keys are in increasing order, No duplicate keys
-fromAscListN      :: Foldable f => Size -> f (Key,a) -> Tree layout a
-fromAscListN n xs = undefined
+fromAscListN      :: (Foldable f, HasNode a) => Size -> f (Key,a) -> Tree VEB a
+fromAscListN n xs = fillUp (F.toList xs) $ create n
 
+type Height = Int
 
--- -- | pre: the keys are given in ascending order, the tree has the right size
--- -- size is 2^h
--- fillUp                     :: f (Key, a) -> Tree b -> Tree a
--- fillUp xs (Tree s subTree) = go root
---   where
---     go ::
-
--- traverseLeavesL'                      :: forall f a b.
---                                          ( Applicative f
---                                          , HasNode a, HasNode b
---                                          )
---                                       => (Key -> a -> f Key)
---                                       -> (Key -> a -> f b)
---                                       -> Tree layout a
---                                       -> f (SVector (Node b))
--- traverseLeavesL' f g (Tree s subTree) = Tree s <$> go0 root
---   where
---     go   :: Index (Node a) -> f (Node b)
---     go i = caseNode (subTree ! i)
---                     (\k v -> leaf <$> f k v <*> g k v)
---                     (\l mi k ma r -> pure $ (coerce node) l mi k ma r)
-
-
---     go0 = SV.createT $ do subTree' <- SMV.unsafeNew (SV.length subTree)
-
-
-
-fixBottomUp             :: forall a b. (HasNode a, HasNode b)
-                        => SV.Vector (Node a)
-                        -> (Key -> a -> Key)
-                        -> (Key -> a -> b)
-                        -> SubTree VEB b
-fixBottomUp subTree f g = SV.create $ do subTree' <- SMV.unsafeNew (SV.length subTree)
-                                         _ <- fixUp subTree'
-                                         pure subTree'
+-- | creates a tree of size 2^h with keys [0,..,2^h]. The nodes contain all zeros
+create   :: Size -> Tree VEB Key
+create n = Tree n . SV.fromListN (size' h) $ create' h
   where
-    fixUp            :: forall m. PrimMonad m
-                     => SMV.MVector (PrimState m) (Node b)
-                     -> m (Min Key, Max Key)
-    fixUp subTree' = go root
-      where
-        go   :: Index (Node a) -> m (Min Key, Max Key)
-        go i = caseNode (subTree ! i)
-                       (\k v       -> leaf' k v)
-                       (\l _ _ _ r -> do (mi,Max k) <- go l
-                                         (_, ma)    <- go r
-                                         node' l mi k ma r
-                       )
-          where
-            leaf'             :: Key -> a -> m (Min Key, Max Key)
-            leaf' k v         = (Min k, Max k)
-                                <$ SMV.write subTree' (coerce i)
-                                                      (leaf (f k v) (g k v))
-            node'             :: Index (Node a)
-                              -> Min Key -> Key -> Max Key
-                              -> Index (Node a)
-                              -> m (Min Key, Max Key)
-            node' l mi k ma r = (mi,ma)
-                                <$ SMV.write subTree' (coerce i)
-                                                      (node (coerce l) mi k ma (coerce r))
+    h = lg n
 
 
--- fixBottomUp         :: forall b. HasNode b => SV.Vector (Node b) -> SubTree VEB b
+testTree   :: Key -> Tree VEB Key
+testTree n = fromAscList . map (\x -> (x,x)) $ [0..(n-1)]
+
+--------------------------------------------------------------------------------
+
+type Nodes = [Node Key]
+
+data PartialTree = PartialTree { startingIndex :: {-# UNPACK #-} !(Index Key)
+                               , subTreeNodes  :: Nodes
+                               } deriving (Show,Eq)
+
+
+-- | Implementation of create
+create'   :: Height -> Nodes
+create' h = case h of
+    0 -> [leaf 0 0]
+    _ | h == m*2  -> let top    = create' (m-1)
+                         bottom = create' m     in create'' top bottom (m-1) m
+      | otherwise -> let top    = create' m     in create'' top top m m
+  where
+    m = h `div` 2
+
+-- | second helper for create.
+--
+-- main idea is to clone the bottom tree, and then connect the top
+-- tree to the clones appropriately.
+--
+create''                  :: Nodes -- ^ top
+                          -> Nodes -- ^ bottom
+                          -> Height -- ^ height of the top tree
+                          -> Height -- ^ height of the bottom tree
+                          -> Nodes
+create'' top bottom th bh = top' <> concatMap subTreeNodes bottoms
+  where
+    top' = connect top bottoms
+
+    bottoms  = map (shiftBy sizeTop sizeBottom bottom) bottoms'
+    bottoms' = [0..(numBottoms-1)]
+
+    numBottoms   = 2 * numLeavesFromHeight th
+
+    sizeTop      = size' th
+    sizeBottom   = size' bh
+
+-- ^ connect the top part with the bottoms by replacing all leaves in top with
+-- nodes to the appropriate indices of the bottom roots
+connect             :: Nodes -- ^ top
+                    -> [PartialTree] -- ^ bottoms
+                    -> Nodes
+connect top bottoms = f bottoms top
+  where
+    f bs []       = assert (null bs) []
+    f bs (n:top') = caseNode n
+           (\_ _ -> case bs of -- leaf case
+                      PartialTree il _ : PartialTree ir _ : bs' ->
+                        node (coerce il) (Min 0) 0 (Max 0) (coerce ir) : f bs' top'
+                      _                                         ->
+                        error "connect: too few bottoms!?"
+
+           )
+           (\ _ _ _ _ _ -> n : f bs top') -- node case
+
+
+-- | shifts a subtree by startOffset + i*size
+shiftBy                       :: Int -- starting offset
+                              -> Size -- the size
+                              -> Nodes -- the nodes
+                              -> Int --
+                              -> PartialTree
+shiftBy startOffSet size'' t i = PartialTree (Index offSet) (fmap f t)
+  where
+    offSet = startOffSet + i*size''
+
+    f nd = caseNode nd
+             (\_ _                         -> nd)
+             (\(Index l) mi k ma (Index r) -> node (Index $ l+offSet) mi k ma (Index $ r+offSet))
+
+--------------------------------------------------------------------------------
+
+
+
+-- | pre: the keys are given in ascending order, the tree has the right size
+-- size is 2^h
+fillUp                     :: forall layout a b.
+                              (HasNode a, HasNode b)
+                           => [(Key, a)] -> Tree layout b -> Tree layout a
+fillUp xs (Tree n subTree) =
+    Tree n $ SV.create
+           $ flip evalStateT xs
+           $ do subTree' <-  SMV.unsafeNew (SV.length subTree)
+                traverseBottomUpM subTree subTree' mkKey mkVal
+                pure subTree'
+  where
+    mkKey     :: PrimMonad m => Key -> b -> StateT [(Key,a)] m Key
+    mkKey _ _ = gets (fst . head)
+    mkVal     :: PrimMonad m => Key -> b -> StateT [(Key,a)] m a
+    mkVal _ _ = do v <- gets (snd . head)
+                   modify tail
+                   pure v
+
+-- |
+traverseBottomUpM             :: forall m a b. (HasNode a, HasNode b, PrimMonad m)
+                              => SV.Vector (Node a)
+                              -> SMV.MVector (PrimState m) (Node b) -- ^ output vector
+                              -> (Key -> a -> m Key) -- ^ function to compute the new keys
+                              -> (Key -> a -> m b)   -- ^ Function to compute the new value
+                              -> m ()
+traverseBottomUpM subTree subTree' f g = void $ go root
+  where
+    -- | We traverse down the input tree, while building the output
+    -- tree, and maintaining the subtree Min and Max'es
+    go   :: Index (Node a) -> m (Min Key, Max Key)
+    go i = caseNode (subTree ! i)
+                    (\k a       -> leaf' k a)
+                    (\l _ _ _ r -> do (mi,Max k) <- go l
+                                      (_, ma)    <- go r
+                                      node' l mi k ma r
+                    )
+       where
+         -- | our leaf' function constructs the new key and new element.
+         -- assuming that the new keys are still monotonically increasing
+         leaf'             :: Key -> a -> m (Min Key, Max Key)
+         leaf' k a         = do k' <- f k a
+                                b  <- g k a
+                                SMV.write subTree' (coerce i) (leaf k' b)
+                                pure (Min k', Max k')
+
+         -- | given the indices of the "old" left and right subtree, which are also
+         -- the right indices for the left and right subtrees of the children,
+         -- build the new tree. Compute and assemble the right node.
+         node'             :: Index (Node a)
+                           -> Min Key -> Key -> Max Key
+                           -> Index (Node a)
+                           -> m (Min Key, Max Key)
+         node' l mi k ma r = (mi,ma)
+                             <$ SMV.write subTree' (coerce i)
+                                                   (node (coerce l) mi k ma (coerce r))
+
+
+-- fttomUp         :: forall b. HasNode b => SV.Vector (Node b) -> SubTree VEB b
 -- fixBottomUp subTree = SV.create $ do subTree' <- SMV.unsafeNew (SV.length subTree)
 --                                      _ <- fixUp subTree'
 --                                      pure subTree'
@@ -267,8 +357,6 @@ delete :: PrimMonad m => Key -> Tree layout a -> m (Tree layout a)
 delete = undefined
 -- rebuilds the tree if we halve its size
 
-
-
 --------------------------------------------------------------------------------
 
 instance HasNode Int where
@@ -302,3 +390,20 @@ v ! (Index i) = v SV.! i
 
 root :: Index a
 root = Index 0
+
+lg :: Size -> Height
+lg = intLog2'
+
+
+-- | number of leaves of a complete tree of height h
+numLeavesFromHeight :: Height -> Size
+numLeavesFromHeight = pow2
+
+{-# SPECIALIZE pow2 :: Height -> Word #-}
+{-# SPECIALIZE pow2 :: Height -> Int  #-}
+pow2   :: Num h => Height -> h
+pow2 h = 2 ^ h
+
+-- | size of a complete tree of height h
+size'   :: Height -> Size
+size' h = pow2 (h + 1) - 1
