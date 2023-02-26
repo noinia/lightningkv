@@ -35,7 +35,7 @@ split' h t = case h of
                       BinLeaf k v -> Left (k,v)
                       _           -> error "split' absurd leaf"
                _ -> let ht = h `div` 2
-                        hb = if h == 1 then 0 else h - ht
+                        hb = if even h then ht - 1 else ht
                     in Right (ht, hb, go ht t)
   where
     go rh (BinNode l k r) = case rh of
