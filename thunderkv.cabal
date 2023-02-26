@@ -1,0 +1,93 @@
+cabal-version:      3.4
+name:               thunderkv
+version:            0.1.0.0
+synopsis:           Cache Oblivious Map
+description:
+  Cache Oblivious Maps
+license:            MIT
+license-file:       LICENSE
+author:             Frank Staals
+maintainer:         frank@fstaals.net
+-- copyright:
+category:           Data Structures
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+tested-with:
+    GHC == 9.2.5
+  , GHC == 9.4.4
+
+common setup
+    ghc-options: -O2 -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
+                 -fspecialise-aggressively -fexpose-all-unfoldings
+    default-language: GHC2021
+    build-depends:
+        base                    >= 4.16.1.0    &&  < 5
+      , mmap                   ^>= 0.5.9
+      , array                  ^>= 0.5
+      , deepseq                 >= 1.1
+      , indexed-traversable    ^>= 0.1.2
+      -- , transformers           ^>= 0.6
+
+    default-extensions:
+        DataKinds
+      , TypeFamilies
+      , GADTs
+      , KindSignatures
+      , ScopedTypeVariables
+      , DerivingStrategies
+      , DerivingVia
+      , GeneralizedNewtypeDeriving
+      , DeriveGeneric
+      , DeriveFunctor
+      , PatternSynonyms
+      , TupleSections
+      , LambdaCase
+      , ViewPatterns
+      , FunctionalDependencies
+
+common quickcheck-setup
+    build-depends:
+        QuickCheck              >= 2.10
+      , quickcheck-instances
+
+common test-setup
+    import: quickcheck-setup
+    build-tool-depends: hspec-discover:hspec-discover
+    ghc-options:
+         -Wall
+         -fno-warn-unticked-promoted-constructors
+         -fno-warn-partial-type-signatures
+         -fno-warn-missing-signatures
+         -fno-warn-type-defaults
+         -fno-warn-orphans
+    build-depends:
+        hspec                   >= 2.9
+
+--------------------------------------------------------------------------------
+
+library
+    import:           setup
+    exposed-modules:
+        -- ThunderKV.Static
+        ThunderKV.Static.Tree
+        ThunderKV.Types
+        ThunderKV.BinTree
+        ThunderKV.Prokob
+    -- other-modules:
+    -- other-extensions:
+    hs-source-dirs:   src
+
+--------------------------------------------------------------------------------
+
+test-suite thunderkv-hspec
+    import:           setup, test-setup
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Main.hs
+    other-modules:
+        Spec
+        ProkobSpec
+    build-depends:
+        thunderkv
