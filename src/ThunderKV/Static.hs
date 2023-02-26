@@ -64,42 +64,42 @@ lookupLE q (Map t) = matchTree leaf node t LEMode
              | otherwise -> r LEMode <|> l MaxMode
 {-# INLINE lookupGE #-}
 
-data LEMode = LookupLE | MaxMode
+data LEMode = LEMode | MaxMode
 
-lookupGEDeleted           :: Key -> Map -> Maybe (Key, Value)
-lookupGEDeleted q (Map t) = undefined leaf node t
-  where
-    leaf ek v   = case ek of
-                    StillHere k   | q <= k                  -> Just (k,v)
-                    DeletedAt t k | q <= k && t `after` now -> Just (k,v)
-                    _                                       -> Nothing
-    node l ek r = case ek of
-                    JustKey k | q <= k    -> l -- max in left subtree is k, so go left
-                              | otherwise -> r
-                    Infty -> r -- apparently the left tree is empty
+-- lookupGEDeleted           :: Key -> Map -> Maybe (Key, Value)
+-- lookupGEDeleted q (Map t) = undefined leaf node t
+--   where
+--     leaf ek v   = case ek of
+--                     StillHere k   | q <= k                  -> Just (k,v)
+--                     DeletedAt t k | q <= k && t `after` now -> Just (k,v)
+--                     _                                       -> Nothing
+--     node l ek r = case ek of
+--                     JustKey k | q <= k    -> l -- max in left subtree is k, so go left
+--                               | otherwise -> r
+--                     Infty -> r -- apparently the left tree is empty
 
-    after         :: Version -> Version -> Bool
-    t1 `after` t2 = t1 > t2
+--     after         :: Version -> Version -> Bool
+--     t1 `after` t2 = t1 > t2
 
-    now = Version 0
+--     now = Version 0
 
-lookupLEDeleted           :: Key -> Map -> Maybe (Key, Value)
-lookupLEDeleted q (Map t) = undefined leaf node t
-  where
-    leaf ek v   = case ek of
-                    StillHere k   | k <= q                  -> Just (k,v)
-                    DeletedAt t k | k <= q && t `after` now -> Just (k,v)
-                    _                                       -> Nothing
-    node l ek r = case ek of
-                    JustKey k | k <= q    -> l
-                              | otherwise -> r <|> maxL -- TODO: this requires soem state.
-                    Infty -> r -- apparently the left tree is empty
+-- lookupLEDeleted           :: Key -> Map -> Maybe (Key, Value)
+-- lookupLEDeleted q (Map t) = undefined leaf node t
+--   where
+--     leaf ek v   = case ek of
+--                     StillHere k   | k <= q                  -> Just (k,v)
+--                     DeletedAt t k | k <= q && t `after` now -> Just (k,v)
+--                     _                                       -> Nothing
+--     node l ek r = case ek of
+--                     JustKey k | k <= q    -> l
+--                               | otherwise -> r <|> maxL -- TODO: this requires soem state.
+--                     Infty -> r -- apparently the left tree is empty
 
-    after         :: Version -> Version -> Bool
-    t1 `after` t2 = t1 > t2
+--     after         :: Version -> Version -> Bool
+--     t1 `after` t2 = t1 > t2
 
-    now = Version 0
-    maxL = undefined
+--     now = Version 0
+--     maxL = undefined
 
 
 --------------------------------------------------------------------------------

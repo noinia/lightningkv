@@ -8,8 +8,7 @@ module ThunderKV.Types
 
   , Version(..)
 
-  , MaybeValue(..)
-  , KeyOrDeleted(..)
+  , LeafValue(..)
   , RoutingKey(..)
   ) where
 
@@ -43,25 +42,18 @@ newtype Version = Version Word64
   deriving newtype (Eq,Ord,Bounded,Enum,NFData)
 
 
-
-
-data MaybeValue = NoValue
-                | JustValue {-# UNPACK #-} !Value
-                deriving stock (Show,Eq,Ord,Generic)
-
-instance NFData MaybeValue
-
-
-data KeyOrDeleted = DeletedAt {-# UNPACK #-}!Version
-                              {-# UNPACK #-}!Key
-                  | StillHere {-# UNPACK #-}!Key
-                  deriving stock (Show,Eq,Ord,Generic)
-
-instance NFData KeyOrDeleted
+data LeafValue = Empty
+               | DeletedAt {-# UNPACK #-}!Version
+                           {-# UNPACK #-}!Key
+                           {-# UNPACK #-}!Value
+               | JustKV    {-# UNPACK #-}!Key
+                           {-# UNPACK #-}!Value
+               deriving stock (Show,Read,Eq,Ord,Generic)
+instance NFData LeafValue
 
 
 data RoutingKey = JustKey   {-# UNPACK #-}!Key
                 | Infty
-                deriving stock (Show,Eq,Ord,Generic)
+                deriving stock (Show,Read,Eq,Ord,Generic)
 
 instance NFData RoutingKey
