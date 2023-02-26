@@ -2,15 +2,18 @@ module ProkobSpec
   ( spec
   ) where
 
+import           Control.Applicative
 import           Control.Monad
+import qualified Data.Array as Array
 import qualified Data.List as List
-import qualified Data.List.NonEmpty as NonEmpty
 import           Data.List.NonEmpty (NonEmpty(..))
+import qualified Data.List.NonEmpty as NonEmpty
 import           Test.Hspec
 import           Test.Hspec.QuickCheck
 import           Test.QuickCheck
 import           ThunderKV.BinTree
 import           ThunderKV.Prokob
+import           ThunderKV.Prokob.Clone
 import           ThunderKV.Static.Tree
 import           ThunderKV.Types
 --------------------------------------------------------------------------------
@@ -110,5 +113,26 @@ spec = describe "prokob layout tests" $ do
            in [1..(size h)-1] == List.sort is
          prop "reconstruct" $ \(Inputs' h xs) ->
            let t  = fromAscListPow2 xs
-               t' = asBinTree . toTree h $ layout t
+               t' = asBinTree . toTree h . NonEmpty.fromList $ layout t
            in t == t'
+         prop "clone" $ \(Inputs' h xs) ->
+           let t  = fromAscListPow2 xs
+               t' = toTree h . NonEmpty.fromList $ layout t
+               tc = structure h
+           in divergeAt tc t' == Nothing
+
+testFH   :: Height -> Tree
+testFH h = toTree h . NonEmpty.fromList . layout $ testH h
+
+testDiverge   :: Height -> Maybe (Index, FlatNode, FlatNode)
+testDiverge h = divergeAt (testFH h) (structure h)
+
+divergeAt       :: Tree -> Tree -> Maybe (Index, FlatNode, FlatNode)
+divergeAt t1 t2 = go 0
+  where
+    go i = case (t1 Array.! i, t2 Array.! i) of
+             (FlatLeaf _ _, FlatLeaf _ _)       -> Nothing
+             (u@(FlatNode l1 _ r1), v@(FlatNode l2 _ r2))
+               | l1 == l2 && r1 == r2 -> go l1 <|> go r1
+               | otherwise            -> Just (i,u,v)
+             (u,v)                    -> Just (i,u,v)

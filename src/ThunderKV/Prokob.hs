@@ -10,7 +10,6 @@ module ThunderKV.Prokob
 import ThunderKV.Types
 import ThunderKV.BinTree
 import ThunderKV.Static.Tree
-import Debug.Trace
 
 ----------------------------------------
 
@@ -44,8 +43,6 @@ split' h t = case h of
                               _ -> let go' = go (rh - 1)
                                    in BinNode (go' l) k (go' r)
     go _  _ = error "split': absurd node"
-
-
 
 
 layout :: BinTree Key Value -> [(Index,FlatNode)]

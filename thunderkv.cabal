@@ -28,6 +28,7 @@ common setup
       , array                  ^>= 0.5
       , deepseq                 >= 1.1
       , indexed-traversable    ^>= 0.1.2
+      , semigroupoids          ^>= 5.3.7
       -- , transformers           ^>= 0.6
 
     default-extensions:
@@ -75,6 +76,7 @@ library
         ThunderKV.Types
         ThunderKV.BinTree
         ThunderKV.Prokob
+        ThunderKV.Prokob.Clone
     -- other-modules:
     -- other-extensions:
     hs-source-dirs:   src

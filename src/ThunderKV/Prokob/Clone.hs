@@ -1,0 +1,108 @@
+module ThunderKV.Prokob.Clone
+  ( structure
+  , templates
+  , templates'
+
+  , Tree'
+  , shiftBy
+  , link
+  , combine
+  ) where
+
+import qualified Data.Array as Array
+import           Data.List.NonEmpty (NonEmpty(..))
+import qualified Data.List.NonEmpty as NonEmpty
+import           Data.Semigroup.Foldable
+import           Data.Traversable
+import           ThunderKV.Static.Tree
+import           ThunderKV.Types
+
+--------------------------------------------------------------------------------
+
+-- | Creates the structure of a tree
+structure   :: Height -> Tree
+structure h = fromNonEmpty h $ arr Array.! h
+  where
+    arr = templates' h
+
+-- fromAscList :: [(Key,Value)] -> Tree
+-- fromAscList =
+
+-- type Templates = Array.Array Height Tree
+
+-- fromAscListWith      :: Templates -> Height -> [(Key,Value)] -> Tree
+-- fromAscListWith ts h = temps
+--   where
+--     h =
+
+
+type Tree' = NonEmpty FlatNode
+
+-- | Shifts a tree to the right by a given amount
+shiftBy       :: Index -> Tree' -> Tree'
+shiftBy delta = fmap (shiftRightBy delta)
+
+
+
+--------------------------------------------------------------------------------
+
+imap       :: Array.Ix i => (i -> a -> b) -> Array.Array i a -> Array.Array i b
+imap f arr = Array.listArray (Array.bounds arr) . map (uncurry f) $ Array.assocs arr
+
+-- | Given a maximum height, construct templates of the appropriate
+-- size for each height.
+templates      :: Height -- ^ maximum height, should be at least 2
+               -> Array.Array Height Tree
+templates maxH = imap fromNonEmpty $ templates' maxH
+
+-- | Given a maximum height, construct templates of the appropriate
+-- size for each height.
+templates'      :: Height -- ^ maximum height, should be at least 2
+                -> Array.Array Height Tree'
+templates' maxH = arr
+  where
+    arr = Array.listArray (0,maxH) (t0 : t1 : [ let (ht,hb) = splitSize h
+                                                    top     = arr Array.! ht
+                                                    bottom  = arr Array.! hb
+                                                in combine (ht,top) (hb,bottom)
+                                              | h <- [2..maxH]
+                                              ]
+                                   )
+    t0 = NonEmpty.fromList [ FlatLeaf emptyKey emptyValue ]
+    t1 = NonEmpty.fromList [ FlatNode 1 emptyKey 2
+                           , FlatLeaf emptyKey emptyValue
+                           , FlatLeaf emptyKey emptyValue
+                           ]
+    emptyKey = Key 0
+    emptyValue = Value 0
+
+splitSize   :: Height -> (Height,Height)
+splitSize h = let ht = h `div` 2
+                  hb = if even h then ht - 1 else ht
+              in (ht,hb)
+
+
+-- | Link a tree of size nt and a tree of size nb
+link       :: Size -- ^ size top tree
+           -> Size -- ^ size bottom tree
+           -> Tree' -> Tree'
+link nt nb = snd . mapAccumL f 0
+  where
+    -- maintains the number of leaves in the top tree
+    f i = \case
+      FlatLeaf k _ -> (i+1, let li = nt + 2*i*nb
+                                ri = nt + (2*i+1)*nb
+                            in FlatNode li k ri
+                      )
+      n            -> (i,n)
+
+-- | Combines the top and bottom tree
+combine                      :: (Height,Tree') -- ^ top tree and its height
+                             -> (Height,Tree') -- ^ bottom tree and its height
+                             -> Tree'
+combine (ht,top) (hb,bottom) = link nt nb top
+                               <> foldMap1 (\i -> shiftBy (nt + i * nb) bottom)
+                                           (NonEmpty.fromList [0..2 ^ (ht+1)])
+  where
+    nt = size ht
+    nb = size hb

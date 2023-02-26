@@ -9,9 +9,8 @@ import           Control.DeepSeq
 -- import           Control.Monad.Writer
 import           Data.Array (Array)
 import qualified Data.Array as Array
-import           Data.Bifoldable
-import           Data.Bifunctor
-import           Data.Bitraversable
+import           ThunderKV.Types
+import           ThunderKV.Prokob
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Word
@@ -20,221 +19,11 @@ import           Prelude hiding (lookup)
 
 --------------------------------------------------------------------------------
 
-type Index = Word64
-
-newtype Key = Key Index
-  deriving stock (Show,Read,Generic)
-  deriving newtype (Eq,Ord,Bounded,Enum,NFData)
-
-newtype Value = Value Index
-  deriving stock (Show,Read,Generic)
-  deriving newtype (Eq,Ord,Bounded,Enum,NFData)
-
-
---------------------------------------------------------------------------------
-
-data FlatNode = FlatLeaf {-# UNPACK #-} !Key {-# UNPACK #-} !Value
-              | FlatNode {-# UNPACK #-} !Index
-                         {-# UNPACK #-} !Key
-                         {-# UNPACK #-} !Index
-              deriving stock (Show,Read,Eq,Ord,Generic)
-instance NFData FlatNode
-
-
-
-
-
-
-
-
-type Tree = Array Index FlatNode
-
---------------------------------------------------------------------------------
-
-
-matchWith             :: (Key -> Value -> r)
-                      -> (r -> Key -> r -> r )
-                      -> Tree
-                      -> r
-matchWith leaf node a = go 0
-  where
-    go i = case a Array.! i of
-             FlatLeaf k v   -> leaf k v
-             FlatNode l k r -> node (go l) k (go r)
-
-----------------------------------------
-
-reconstruct :: Tree -> BinTree Key Value
-reconstruct = matchWith BinLeaf BinNode
-
---------------------------------------------------------------------------------
-
 newtype Map = Map Tree
   deriving stock (Show,Read,Generic)
   deriving newtype (Eq,Ord,NFData)
 
-
 --------------------------------------------------------------------------------
-
-data BinTree k v = BinLeaf k v
-                 | BinNode (BinTree k v) k (BinTree k v)
-                 deriving (Show,Eq,Functor,Foldable,Traversable)
-
-instance Bifunctor BinTree where
-  bimap f g = go
-    where
-      go = \case
-        BinLeaf k v   -> BinLeaf (f k) (g v)
-        BinNode l k r -> BinNode (go l) (f k) (go r)
-
-instance Bifoldable BinTree where
-  bifoldMap f g = go
-    where
-      go = \case
-        BinLeaf k v   -> f k <> g v
-        BinNode l k r -> go l <> f k <> go r
-
-instance Bitraversable BinTree where
-  bitraverse f g = go
-    where
-      go = \case
-        BinLeaf k v   -> BinLeaf <$> f k <*> g v
-        BinNode l k r -> BinNode <$> go l <*> f k <*> go r
-
-
-leavesWithIndex :: BinTree k v -> [(Index, v)]
-leavesWithIndex = zip [0..] . bifoldMap (const []) (: [])
-
-
-mapLeavesWithIndex      :: Word64 -- h
-                        -> (Index -> k -> v -> v')
-                        -> BinTree k v -- size should be 2^h
-                        -> BinTree k v'
-mapLeavesWithIndex h0 g = go h0 0
-  where
-    go h s = \case
-      BinLeaf k v   -> BinLeaf k (g s k v)
-      BinNode l k r -> let go'   = go (h-1)
-                           sizeL = 2 ^ (h-1)
-                       in BinNode (go' s l) k (go' (s + sizeL) r)
-
-
-
--- mapLeavesWithIndex (heightL test) (\i v -> (i,v)) test
-
-
-
--- | computes the number of nodes h on the left-spine assuming the
--- tree is a complete binary tree, this then means the tree has 2^h
--- nodes.
-heightL :: BinTree k v -> Word64
-heightL = \case
-  BinLeaf   _ _ -> 0
-  BinNode l _ _ -> 1 + heightL l
-
--- | Returns the height of the top trees as well as the heights of the bottom trees
-split   :: BinTree k v -> Either (k, v)
-                                 (Word64, Word64, BinTree k (BinTree k v, BinTree k v))
-split t = split' (heightL t) t
-
--- | invariant, tree has height 2^h
-split'     :: Word64 -> BinTree k v -> Either (k, v)
-                                              (Word64, Word64, BinTree k (BinTree k v, BinTree k v))
-split' h t = case h of
-               0 -> case t of
-                      BinLeaf k v -> Left (k,v)
-                      _           -> error "split' absurd leaf"
-               _ -> let ht = h `div` 2
-                        hb = if h == 1 then 0 else h - ht
-                    in Right (ht, hb, go ht t)
-  where
-    go rh (BinNode l k r) = case rh of
-                              0 -> BinLeaf k (l,r)
-                              _ -> let go' = go (rh - 1)
-                                   in BinNode (go' l) k (go' r)
-    go _  _ = error "split': absurd node"
-
-
-type Size = Index
-
-
-
-
-layout :: BinTree Key Value -> [(Index,FlatNode)]
-layout = layoutWith id id
-
-layoutWith         :: (k -> Key) -> (v -> Value) -> BinTree k v -> [(Index,FlatNode)]
-layoutWith mkK mkV = layout' mkK (\k v -> FlatLeaf (mkK k) (mkV v)) 0
-
-layout'                :: (k -> Key)
-                       -> (k -> v -> FlatNode)
-                       -> Index
-                       -> BinTree k v -> [(Index, FlatNode)]
-layout' mkK mkNode s t =
-  case split t of
-    Left (k,v)       -> [(s, mkNode k v)]
-    Right (ht,hb,top) -> let nt = 2 ^ ht -- size top
-                             nb = 2 ^ hb -- size bottom
-                             bottoms = concatMap (\(i,(b1,b2)) ->
-                                                     layout' mkK mkNode (nt + 2*i*nb) b1
-                                                     <>
-                                                     layout' mkK mkNode (nt + (2*i+1)*nb) b2
-                                                 )
-                                     $ leavesWithIndex top
-                             top' = layout' mkK (\_ v -> v) s
-                                  $ mapLeavesWithIndex ht (\i k (b1,b2) ->
-                                                              FlatNode (nt + 2*i*nb)
-                                                                       (mkK k)
-                                                                       (nt + (2*i+1)*nb)
-                                                          ) top
-                         in top' <> bottoms
-
-
-
-
-
-fromAscListPow2' :: Ord k => NonEmpty (k,v) -> BinTree k v
-fromAscListPow2' = fst . repeatedly merge . fmap (\(k,v) -> (BinLeaf k v, k))
-  where
-    repeatedly _ (t :| []) = t
-    repeatedly f ts        = repeatedly f $ f ts
-
-    merge ts@(_ :| [])  = ts
-    merge (l :| r : []) = node l r :| []
-    merge (l :| r : ts) = node l r NonEmpty.<| merge (NonEmpty.fromList ts)
-
-    node (l,k) (r,m) = (BinNode l k r, m)
-
-
---------------------------------------------------------------------------------
-
-test :: BinTree Word64 Word64
-test = fromAscListPow2' $ NonEmpty.fromList
-       [ (0,0)
-       , (1,2)
-       , (20,3)
-       , (21,5)
-       ]
-
-test2 = fromAscListPow2' . NonEmpty.fromList . map (\i -> (Key i, Value i))
-      $ [0..(2^3)-1]
-
---------------------------------------------------------------------------------
-
-type Height = Index
-
--- -- | Construct a tree of size 2^h filled with zeros
--- construct   :: Word64 -> [FlatNode]
--- construct h = case h of
---                 0 -> [FlatLeaf (Key 0) (Value 0)]
---                 _ -> let ht = h `div` 2
---                          hb = h - ht
---                      in undefined
-
-
-
---------------------------------------------------------------------------------
-
 
 fromAscListPow2 :: [(Key, Value)] -> Map
 fromAscListPow2 = undefined
@@ -247,9 +36,70 @@ lookup q m = case lookupGE q m of
 {-# INLINE lookup #-}
 
 
-lookupGE  :: Key -> Map -> Maybe (Key, Value)
-lookupGE = undefined
+lookupGE          :: Key -> Map -> Maybe (Key, Value)
+lookupGE q (Map t) = matchTree leaf node t
+  where
+    leaf k v | q <= k    = Just (k,v)
+             | otherwise = Nothing
+    node l k r | q <= k    = l
+               | otherwise = r
+{-# INLINE lookupGE #-}
 
+lookupLE          :: Key -> Map -> Maybe (Key, Value)
+lookupLE q (Map t) = matchTree leaf node t LEMode
+  where
+    leaf                 :: Key -> Value -> LEMode -> Maybe (Key,Value)
+    leaf k v = \case
+      MaxMode            -> Just (k,v)
+      LEMode | k <= q    -> Just (k,v)
+             | otherwise -> Nothing
+
+    node                  :: (LEMode -> Maybe (Key,Value))
+                          -> Key
+                          -> (LEMode -> Maybe (Key,Value))
+                          -> LEMode -> Maybe (Key,Value)
+    node l k r = \case
+      MaxMode            -> r MaxMode
+      LEMode | q <= k    -> l LEMode
+             | otherwise -> r LEMode <|> l MaxMode
+{-# INLINE lookupGE #-}
+
+data LEMode = LookupLE | MaxMode
+
+lookupGEDeleted           :: Key -> Map -> Maybe (Key, Value)
+lookupGEDeleted q (Map t) = undefined leaf node t
+  where
+    leaf ek v   = case ek of
+                    StillHere k   | q <= k                  -> Just (k,v)
+                    DeletedAt t k | q <= k && t `after` now -> Just (k,v)
+                    _                                       -> Nothing
+    node l ek r = case ek of
+                    JustKey k | q <= k    -> l -- max in left subtree is k, so go left
+                              | otherwise -> r
+                    Infty -> r -- apparently the left tree is empty
+
+    after         :: Version -> Version -> Bool
+    t1 `after` t2 = t1 > t2
+
+    now = Version 0
+
+lookupLEDeleted           :: Key -> Map -> Maybe (Key, Value)
+lookupLEDeleted q (Map t) = undefined leaf node t
+  where
+    leaf ek v   = case ek of
+                    StillHere k   | k <= q                  -> Just (k,v)
+                    DeletedAt t k | k <= q && t `after` now -> Just (k,v)
+                    _                                       -> Nothing
+    node l ek r = case ek of
+                    JustKey k | k <= q    -> l
+                              | otherwise -> r <|> maxL -- TODO: this requires soem state.
+                    Infty -> r -- apparently the left tree is empty
+
+    after         :: Version -> Version -> Bool
+    t1 `after` t2 = t1 > t2
+
+    now = Version 0
+    maxL = undefined
 
 
 --------------------------------------------------------------------------------
