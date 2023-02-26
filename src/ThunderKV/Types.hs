@@ -3,6 +3,8 @@ module ThunderKV.Types
   , Height
   , Key(..)
   , Value(..)
+  , size
+  , Size
   ) where
 
 import           Control.DeepSeq
@@ -23,3 +25,10 @@ newtype Key = Key Index
 newtype Value = Value Index
   deriving stock (Show,Read,Generic)
   deriving newtype (Eq,Ord,Bounded,Enum,NFData)
+
+
+-- | Size of a tree of height h
+size   :: Height -> Size
+size h = 2 ^ (h + 1) - 1
+
+type Size = Index

@@ -7,9 +7,10 @@ module ThunderKV.Prokob
 -- import           Control.Monad.Writer
 -- import           Data.List.NonEmpty (NonEmpty(..))
 -- import qualified Data.List.NonEmpty as NonEmpty
-import           ThunderKV.Types
-import           ThunderKV.BinTree
-import           ThunderKV.Static.Tree
+import ThunderKV.Types
+import ThunderKV.BinTree
+import ThunderKV.Static.Tree
+import Debug.Trace
 
 ----------------------------------------
 
@@ -45,7 +46,6 @@ split' h t = case h of
     go _  _ = error "split': absurd node"
 
 
-type Size = Index
 
 
 layout :: BinTree Key Value -> [(Index,FlatNode)]
@@ -56,6 +56,7 @@ layoutWith mkK mkV = layout' mkK (\k v -> FlatLeaf (mkK k) (mkV v)) 0
 
 type NodeWriter = [(Index, FlatNode)]
 
+
 layout'                :: (k -> Key)
                        -> (k -> v -> FlatNode)
                        -> Index
@@ -64,8 +65,8 @@ layout' mkK mkNode s t =
     case split t of
       Left (k,v)       -> [(s, mkNode k v)]
       Right (ht,hb,top) ->
-        let nt = 2 ^ ht -- size top
-            nb = 2 ^ hb -- size bottom
+        let nt = size ht -- size top
+            nb = size hb -- size bottom
             WithComp bottoms top' = itraverseWithKey f top
 
             f i k (b1,b2) = let li    = s + nt + 2*i*nb

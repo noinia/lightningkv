@@ -3,6 +3,7 @@ module ThunderKV.Static.Tree
   , FlatNode(..)
   , matchTree
   , asBinTree
+  , toTree
   ) where
 
 import           Control.DeepSeq
@@ -25,6 +26,10 @@ data FlatNode = FlatLeaf {-# UNPACK #-} !Key {-# UNPACK #-} !Value
                          {-# UNPACK #-} !Index
               deriving stock (Show,Read,Eq,Ord,Generic)
 instance NFData FlatNode
+
+-- | Construct a tree
+toTree   :: Height -> [(a,FlatNode)] -> Tree
+toTree h = Array.listArray (0,size h) . map snd
 
 --------------------------------------------------------------------------------
 

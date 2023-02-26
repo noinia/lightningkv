@@ -64,7 +64,7 @@ itraverseWithKey f t = t'
       go s = \case
         BinLeaf k v   -> WithCount (s+1) (BinLeaf k <$> f s k v)
         BinNode l k r -> let WithCount m tl = go s l
-                             WithCount n tr = go (s+m) r
+                             WithCount n tr = go m r
                          in WithCount n ((\l' r' -> BinNode l' k r') <$> tl <*> tr)
 {-# INLINE itraverseWithKey #-}
 
