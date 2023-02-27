@@ -13,12 +13,14 @@ module ThunderKV.Types
   , RoutingKey(..)
   ) where
 
-import           Control.DeepSeq
-import           Data.Word
-import           GHC.Generics (Generic)
+import Control.DeepSeq
+import Data.Word
+import Foreign.Storable
+import GHC.Generics (Generic)
 
 --------------------------------------------------------------------------------
 
+-- | Indices that we use are just Word's
 type Index = Word64
 
 -- | Measures the height of the tree, leaves have height 0
@@ -26,11 +28,11 @@ type Height = Word64
 
 newtype Key = Key Index
   deriving stock (Show,Read,Generic)
-  deriving newtype (Eq,Ord,Bounded,Enum,NFData)
+  deriving newtype (Eq,Ord,Bounded,NFData,Storable)
 
 newtype Value = Value Index
   deriving stock (Show,Read,Generic)
-  deriving newtype (Eq,Ord,Bounded,Enum,NFData)
+  deriving newtype (Eq,Ord,Bounded,NFData,Storable)
 
 
 type Size = Index
@@ -46,7 +48,7 @@ numLeaves h = 2 ^ h
 
 newtype Version = Version Word64
   deriving stock (Show,Read,Generic)
-  deriving newtype (Eq,Ord,Bounded,Enum,NFData)
+  deriving newtype (Eq,Ord,Bounded,NFData,Storable)
 
 
 -- FIXME: internal nodes also need to know when they are empty
