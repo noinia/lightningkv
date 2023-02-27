@@ -14,12 +14,10 @@ module ThunderKV.Static.Tree
 
 import           Control.DeepSeq
 import           Control.Monad.ST
-import           Data.Array (Array)
-import qualified Data.Array as Array
-import qualified Data.Array.ST as STArray
--- import qualified Data.Array.Unsafe as Array.Unsafe
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
+import           Data.Vector (Vector)
+import qualified Data.Vector as Vector
 -- import           Foreign.Storable
 import           Foreign.Storable.Generic
 import           GHC.Generics (Generic)
@@ -29,10 +27,11 @@ import           ThunderKV.Types
 --------------------------------------------------------------------------------
 
 -- | A binary tree embedded as a flat array.
-type Tree = Array Index FlatNode
+type Tree = Vector FlatNode
+            -- Array Index FlatNode
 
-type STTree s = STArray.STArray s Index FlatNode
 
+-- type STTree s = STArray.STArray s Index FlatNode
 
 
 -- | The nodes of our embeded tree
@@ -57,8 +56,8 @@ toTree h = fromNonEmpty h . fmap snd
 
 -- | Given the height and the list of nodes, constructs the tree.
 fromNonEmpty   :: Height -> NonEmpty FlatNode -> Tree
-fromNonEmpty h = Array.listArray (0,size h - 1) . NonEmpty.toList
-
+fromNonEmpty h = Vector.fromListN (size h) . NonEmpty.toList
+  -- indices in the range [0,size h - 1]
 
 -- | shifts the node to the right by some amount.
 shiftRightBy       :: Index -> FlatNode -> FlatNode
@@ -98,7 +97,7 @@ matchTree             :: (Key -> Value -> r)
                       -> r
 matchTree leaf node a = go 0
   where
-    go i = case a Array.! i of
+    go i = case a Vector.! i of
              FlatLeaf k v   -> leaf k v
              FlatNode l k r -> node (go l) k (go r)
 {-# INLINE matchTree #-}
@@ -120,7 +119,7 @@ asBinTree = matchTree BinLeaf BinNode
 --                        -> f Tree
 -- matchTreeA leaf node a = go 0
 --   where
---     go i = case a Array.! i of
+--     go i = case a Vector.! i of
 --              FlatLeaf k v -> curry FlatLeaf <$> leaf i k v
 
 
@@ -129,3 +128,6 @@ asBinTree = matchTree BinLeaf BinNode
 -- -- assumes the keys are given in ascending order.
 -- fillAsc      :: Tree' -> [(Key,Value)] -> Tree'
 -- fillAsc t xs =
+
+
+--------------------------------------------------------------------------------

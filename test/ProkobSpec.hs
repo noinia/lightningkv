@@ -7,6 +7,7 @@ import           Control.Monad
 import qualified Data.Array as Array
 import qualified Data.Foldable as F
 import qualified Data.List as List
+import qualified Data.Vector as Vector
 -- import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import           Test.Hspec
@@ -185,7 +186,7 @@ testDiverge h = divergeAt (testFH h) (structure h)
 divergeAt       :: Tree -> Tree -> Maybe (Index, FlatNode, FlatNode)
 divergeAt t1 t2 = go 0
   where
-    go i = case (t1 Array.! i, t2 Array.! i) of
+    go i = case (t1 Vector.! i, t2 Vector.! i) of
              (FlatLeaf _ _, FlatLeaf _ _)       -> Nothing
              (u@(FlatNode l1 _ r1), v@(FlatNode l2 _ r2))
                | l1 == l2 && r1 == r2 -> go l1 <|> go r1
