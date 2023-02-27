@@ -3,9 +3,11 @@ module ThunderKV.Types
   , Height
   , Key(..)
   , Value(..)
-  , treeSize
+  , size
   , numLeaves
   , Size
+  , Capacity
+  , asSize
 
   , Version(..)
 
@@ -14,6 +16,7 @@ module ThunderKV.Types
   ) where
 
 import Control.DeepSeq
+import Data.Ix
 import Data.Word
 import Foreign.Storable
 import GHC.Generics (Generic)
@@ -23,15 +26,26 @@ import GHC.Generics (Generic)
 -- | Indices that we use are just Word's
 type Index = Word64
 
--- | Measures the height of the tree, leaves have height 0
-type Height = Word64
-
--- | The Size of various things (trees, arrays etc.)
+-- | The Size of the Tree
 type Size = Index
-  -- be *very* careful when changing this, since we treat these really
-  -- as the same type.
+
+-- | Measures the height of the tree, leaves have height 0
+newtype Height = Height Word8
+  deriving newtype (Show,Read,Eq,Ord,Num,Real,Enum,Bounded,Integral,Ix)
 
 
+-- | Models the number of elements that we can store in our trees.
+newtype Capacity = Capacity Index
+  deriving newtype (Show,Read,Eq,Ord,Num,Real,Enum,Integral,Ix)
+
+-- | Interpet a capacity as a size.
+asSize              :: Capacity -> Size
+asSize (Capacity i) = i
+
+instance Bounded Capacity where
+  minBound = 0
+  maxBound = Capacity $ maxBound @Index `div` 2
+  -- since a tree of n elements has size 2n-1
 
 newtype Key = Key Index
   deriving stock (Show,Read,Generic)
@@ -41,16 +55,15 @@ newtype Value = Value Index
   deriving stock (Show,Read,Generic)
   deriving newtype (Eq,Ord,Bounded,NFData,Storable)
 
-
-
 -- | Size of a tree of height h
-treeSize   :: Height -> Size
-treeSize h = 2 ^ (h + 1) - 1
+size   :: Height -> Size
+size h = 2 ^ (h + 1) - 1
 
 -- | Number of leaves (and therefore number of elements) in a tree of
 -- size h: 2 ^ h.
-numLeaves   :: Height -> Size
+numLeaves   :: Height -> Capacity
 numLeaves h = 2 ^ h
+
 
 newtype Version = Version Word64
   deriving stock (Show,Read,Generic)

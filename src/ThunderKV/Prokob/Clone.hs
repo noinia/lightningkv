@@ -48,7 +48,7 @@ shiftBy delta = fmap (shiftRightBy delta)
 
 -- t2 = templates' 2 Array.! 2
 
--- foo = link (treeSize 2) (treeSize 1) t2
+-- foo = link (size 2) (size 1) t2
 
 -- traceWith ms x = x
 
@@ -113,10 +113,13 @@ combine                      :: (Height,Tree') -- ^ top tree and its height
                              -> Tree'
 combine (ht,top) (hb,bottom) = link nt nb top
                                <> foldMap1 (\i -> shiftBy (nt + i * nb) bottom)
-                                           (NonEmpty.fromList [0..2 ^ (ht+1)-1])
+                                           newLeaves
   where
-    nt = treeSize ht
-    nb = treeSize hb
+    nt = size ht
+    nb = size hb
+
+    numTopLeaves = asSize (numLeaves ht) :: Size
+    newLeaves = NonEmpty.fromList [0.. (2 * numTopLeaves)-1]
 
 -- | Link a tree of size nt and a tree of size nb
 link       :: Size -- ^ size top tree

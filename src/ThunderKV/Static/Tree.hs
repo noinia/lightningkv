@@ -57,7 +57,7 @@ toTree h = fromNonEmpty h . fmap snd
 
 -- | Given the height and the list of nodes, constructs the tree.
 fromNonEmpty   :: Height -> NonEmpty FlatNode -> Tree
-fromNonEmpty h = Array.listArray (0,(treeSize h) - 1) . NonEmpty.toList
+fromNonEmpty h = Array.listArray (0,size h - 1) . NonEmpty.toList
 
 
 -- | shifts the node to the right by some amount.

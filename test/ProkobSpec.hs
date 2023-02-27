@@ -66,7 +66,7 @@ upTo h = case h of
 
 testH   :: Height -> BinTree Key Value
 testH h = fromAscListPow2 . NonEmpty.fromList . map (\_ -> (Key 0, Value 0))
-        $ [0..(2^h)-1]
+        $ [0..numLeaves h - 1]
 
 -- testx :: BinTree Key Value
 -- testx = fromAscListPow2 $ (Key 0,Value 1) :| [(Key 1,Value 1)]
@@ -106,7 +106,7 @@ splitSpec = describe "split based implementation tests" $ do
       in heightL t == h
     prop "fromAscListPow2 correct size" $ \(Inputs' h xs) ->
       let t = fromAscListPow2 xs
-      in List.genericLength (layout t) == treeSize h
+      in List.genericLength (layout t) == size h
     prop "right heights" $ \(Inputs' h xs) ->
       let t = fromAscListPow2 xs
       in case split t of
@@ -118,25 +118,25 @@ splitSpec = describe "split based implementation tests" $ do
     prop "indices disjoint" $ \(Inputs' h xs) ->
       let t  = fromAscListPow2 xs
           is = indices (layout t)
-      in [0..(treeSize h)-1] == is
+      in [0..(size h)-1] == is
     prop "indices used" $ \(Inputs' h xs) ->
       let t  = fromAscListPow2 xs
           is = indicesUsed' (layout t)
-      in [1..(treeSize h)-1] == List.sort is
+      in [1..(size h)-1] == List.sort is
 
     prop "reconstruct" $ \(Inputs' h xs) ->
       let t  = fromAscListPow2 xs
           t' = asBinTree . toTree h . NonEmpty.fromList $ layout t
       in t == t'
 
-countLeaves :: Foldable f => f FlatNode -> Size
+countLeaves :: Foldable f => f FlatNode -> Capacity
 countLeaves = List.genericLength . filter isLeaf . F.toList
 
 cloneSpec :: Spec
 cloneSpec = describe "clone based implementation tests" $ do
     it "size t2" $
       let t2   = templates' 2 Array.! 2
-          _foo = link (treeSize 2) (treeSize 1) t2
+          _foo = link (size 2) (size 1) t2
       in countLeaves t2 `shouldBe`numLeaves 2
 
     forM_ (Array.assocs $ templates' maxHeight) $ \(h,t) ->
@@ -153,7 +153,7 @@ cloneSpec = describe "clone based implementation tests" $ do
 
     prop "indices used clone" $ \(Inputs' h _xs) ->
       let is = indicesUsed (structure h)
-      in [1..(treeSize h)-1] == List.sort is
+      in [1..(size h)-1] == List.sort is
 
     forM_ [0..maxHeight] $ \h ->
       it ("clone by height identical " <> show h) $

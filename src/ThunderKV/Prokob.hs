@@ -62,8 +62,8 @@ layout' mkK mkNode s t =
     case split t of
       Left (k,v)       -> [(s, mkNode k v)]
       Right (ht,hb,top) ->
-        let nt = treeSize ht -- tree top    tree (in number of nodes)
-            nb = treeSize hb -- size bottom tree (in number of nodes)
+        let nt = size ht -- tree top    tree (in number of nodes)
+            nb = size hb -- size bottom tree (in number of nodes)
             WithComp bottoms top' = itraverseWithKey f top
 
             f i k (b1,b2) = let li    = s + nt + 2*i*nb
