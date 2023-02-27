@@ -7,6 +7,8 @@ module ThunderKV.Prokob.Clone
   , shiftBy
   , link
   , combine
+
+  , splitSize
   ) where
 
 import qualified Data.Array as Array
@@ -23,7 +25,7 @@ import           ThunderKV.Types
 structure   :: Height -> Tree
 structure h = fromNonEmpty h $ arr Array.! h
   where
-    arr = templates' h
+    arr = templates' (h `max` 2)
 
 -- fromAscList :: [(Key,Value)] -> Tree
 -- fromAscList =
@@ -42,7 +44,16 @@ type Tree' = NonEmpty FlatNode
 shiftBy       :: Index -> Tree' -> Tree'
 shiftBy delta = fmap (shiftRightBy delta)
 
+--------------------------------------------------------------------------------
 
+-- t2 = templates' 2 Array.! 2
+
+-- foo = link (treeSize 2) (treeSize 1) t2
+
+-- traceWith ms x = x
+
+-- traceWith       :: Show a => String -> a -> a
+-- traceWith msg x = trace (msg <> "BEGIN " <> show x <> " END") x
 
 --------------------------------------------------------------------------------
 
@@ -102,7 +113,7 @@ combine                      :: (Height,Tree') -- ^ top tree and its height
                              -> Tree'
 combine (ht,top) (hb,bottom) = link nt nb top
                                <> foldMap1 (\i -> shiftBy (nt + i * nb) bottom)
-                                           (NonEmpty.fromList [0..2 ^ (ht+1)])
+                                           (NonEmpty.fromList [0..2 ^ (ht+1)-1])
   where
-    nt = size ht
-    nb = size hb
+    nt = treeSize ht
+    nb = treeSize hb

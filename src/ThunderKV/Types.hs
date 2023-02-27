@@ -3,7 +3,8 @@ module ThunderKV.Types
   , Height
   , Key(..)
   , Value(..)
-  , size
+  , treeSize
+  , numLeaves
   , Size
 
   , Version(..)
@@ -31,16 +32,26 @@ newtype Value = Value Index
   deriving stock (Show,Read,Generic)
   deriving newtype (Eq,Ord,Bounded,Enum,NFData)
 
--- | Size of a tree of height h
-size   :: Height -> Size
-size h = 2 ^ (h + 1) - 1
 
 type Size = Index
+
+-- | Size of a tree of height h
+treeSize   :: Height -> Size
+treeSize h = 2 ^ (h + 1) - 1
+
+-- | Number of leaves (and therefore number of elements) in a tree of
+-- size h: 2 ^ h.
+numLeaves   :: Height -> Size
+numLeaves h = 2 ^ h
 
 newtype Version = Version Word64
   deriving stock (Show,Read,Generic)
   deriving newtype (Eq,Ord,Bounded,Enum,NFData)
 
+
+-- FIXME: internal nodes also need to know when they are empty
+-- so just implement empty structures at: deletedAsOf (time 0)
+-- create a separate constructor in nodes for this I think.
 
 data LeafValue = Empty
                | DeletedAt {-# UNPACK #-}!Version
@@ -51,7 +62,7 @@ data LeafValue = Empty
                deriving stock (Show,Read,Eq,Ord,Generic)
 instance NFData LeafValue
 
-
+-- | these should not be needed
 data RoutingKey = JustKey   {-# UNPACK #-}!Key
                 | Infty
                 deriving stock (Show,Read,Eq,Ord,Generic)
