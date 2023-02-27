@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -fplugin=Foreign.Storable.Generic.Plugin #-}
+{-# OPTIONS_GHC -fplugin-opt=Foreign.Storable.Generic.Plugin:-v1 #-}
+{-# LANGUAGE DeriveAnyClass #-}
 module ThunderKV.Static.Tree
   ( Tree
   , FlatNode(..)
@@ -17,6 +20,8 @@ import qualified Data.Array.ST as STArray
 import qualified Data.Array.Unsafe as Array.Unsafe
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
+import           Foreign.Storable
+import           Foreign.Storable.Generic
 import           GHC.Generics (Generic)
 import           ThunderKV.BinTree
 import           ThunderKV.Types
@@ -36,6 +41,7 @@ data FlatNode = FlatLeaf {-# UNPACK #-} !Key {-# UNPACK #-} !Value
                          {-# UNPACK #-} !Key
                          {-# UNPACK #-} !Index
               deriving stock (Show,Read,Eq,Ord,Generic)
+              deriving anyclass (GStorable)
 instance NFData FlatNode
 
 -- | Test if this is a leaf or a node

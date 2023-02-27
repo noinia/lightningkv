@@ -62,6 +62,8 @@ data LeafValue = Empty
                | JustKV    {-# UNPACK #-}!Key
                            {-# UNPACK #-}!Value
                deriving stock (Show,Read,Eq,Ord,Generic)
+
+
 instance NFData LeafValue
 
 -- | these should not be needed

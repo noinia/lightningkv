@@ -7,7 +7,7 @@ import           Control.Monad
 import qualified Data.Array as Array
 import qualified Data.Foldable as F
 import qualified Data.List as List
-import           Data.List.NonEmpty (NonEmpty(..))
+-- import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import           Test.Hspec
 import           Test.Hspec.QuickCheck
@@ -53,23 +53,23 @@ instance (Arbitrary a) => Arbitrary (Inputs' a) where
                          ]
 upTo h = case h of
            0 -> []
-           h -> [0..h -1]
+           _ -> [0..h -1]
 
 
-test :: BinTree Index Index
-test = fromAscListPow2 $ NonEmpty.fromList
-       [ (0,0)
-       , (1,2)
-       , (20,3)
-       , (21,5)
-       ]
+-- test :: BinTree Index Index
+-- test = fromAscListPow2 $ NonEmpty.fromList
+--        [ (0,0)
+--        , (1,2)
+--        , (20,3)
+--        , (21,5)
+--        ]
 
 testH   :: Height -> BinTree Key Value
-testH h = fromAscListPow2 . NonEmpty.fromList . map (\i -> (Key 0, Value 0))
+testH h = fromAscListPow2 . NonEmpty.fromList . map (\_ -> (Key 0, Value 0))
         $ [0..(2^h)-1]
 
-testx :: BinTree Key Value
-testx = fromAscListPow2 $ (Key 0,Value 1) :| [(Key 1,Value 1)]
+-- testx :: BinTree Key Value
+-- testx = fromAscListPow2 $ (Key 0,Value 1) :| [(Key 1,Value 1)]
 
 
 flatten :: BinTree Index Index -> [(Index,FlatNode)]
@@ -135,7 +135,9 @@ countLeaves = List.genericLength . filter isLeaf . F.toList
 cloneSpec :: Spec
 cloneSpec = describe "clone based implementation tests" $ do
     it "size t2" $
-      countLeaves t2 `shouldBe`numLeaves 2
+      let t2   = templates' 2 Array.! 2
+          _foo = link (treeSize 2) (treeSize 1) t2
+      in countLeaves t2 `shouldBe`numLeaves 2
 
     forM_ (Array.assocs $ templates' maxHeight) $ \(h,t) ->
       it ("count leaves from templates' " <> show h) $
@@ -149,7 +151,7 @@ cloneSpec = describe "clone based implementation tests" $ do
       it ("clone: number of leaves of height " <> show h <> " correct") $
         (countLeaves $ structure h) `shouldBe` numLeaves h
 
-    prop "indices used clone" $ \(Inputs' h xs) ->
+    prop "indices used clone" $ \(Inputs' h _xs) ->
       let is = indicesUsed (structure h)
       in [1..(treeSize h)-1] == List.sort is
 
@@ -189,9 +191,3 @@ divergeAt t1 t2 = go 0
                | l1 == l2 && r1 == r2 -> go l1 <|> go r1
                | otherwise            -> Just (i,u,v)
              (u,v)                    -> Just (i,u,v)
-
-
-
-t2 = templates' 2 Array.! 2
-
-foo = link (treeSize 2) (treeSize 1) t2

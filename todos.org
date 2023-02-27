@@ -1,0 +1,36 @@
+
+
+* TODO test querying
+
+
+* TODO switch to Storable vectors
+** TODO storable instances for the sum types
+
+
+* TODO implement deletions
+** TODO make some simple stub using binary trees first
+
+** TODO tests for deletions
+
+** TODO update the data type to allow for deleted items
+
+internal nodes also may need to know when things were deleted.
+
+read the details of the partial persistence stuff again to figure out
+if we are still missing s.t.
+
+
+* TODO implement building trees that are not of size 2^h for some h.
+
+essentially mark these items as deleted at time 0.
+
+* TODO support storing items on disk
+
+** TODO mmap-array
+
+maeke a version of mmap-vector that uses Array instead.
+
+
+
+
+* TODO Write benchmarks
