@@ -23,8 +23,8 @@ import GHC.Generics (Generic)
 
 --------------------------------------------------------------------------------
 
--- | Indices that we use are just Word's
-type Index = Word64
+-- | Indices that we use
+type Index = Int
 
 -- | The Size of the Tree
 type Size = Index
