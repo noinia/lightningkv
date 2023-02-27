@@ -26,6 +26,13 @@ type Index = Word64
 -- | Measures the height of the tree, leaves have height 0
 type Height = Word64
 
+-- | The Size of various things (trees, arrays etc.)
+type Size = Index
+  -- be *very* careful when changing this, since we treat these really
+  -- as the same type.
+
+
+
 newtype Key = Key Index
   deriving stock (Show,Read,Generic)
   deriving newtype (Eq,Ord,Bounded,NFData,Storable)
@@ -35,7 +42,6 @@ newtype Value = Value Index
   deriving newtype (Eq,Ord,Bounded,NFData,Storable)
 
 
-type Size = Index
 
 -- | Size of a tree of height h
 treeSize   :: Height -> Size

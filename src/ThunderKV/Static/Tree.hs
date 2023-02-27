@@ -17,10 +17,10 @@ import           Control.Monad.ST
 import           Data.Array (Array)
 import qualified Data.Array as Array
 import qualified Data.Array.ST as STArray
-import qualified Data.Array.Unsafe as Array.Unsafe
+-- import qualified Data.Array.Unsafe as Array.Unsafe
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
-import           Foreign.Storable
+-- import           Foreign.Storable
 import           Foreign.Storable.Generic
 import           GHC.Generics (Generic)
 import           ThunderKV.BinTree

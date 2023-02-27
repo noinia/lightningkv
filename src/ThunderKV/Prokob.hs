@@ -104,7 +104,7 @@ instance Applicative WithComp where
 
 
 -- -- | Construct a tree of size 2^h filled with zeros
--- construct   :: Word64 -> [FlatNode]
+-- construct   :: Height -> [FlatNode]
 -- construct h = case h of
 --                 0 -> [FlatLeaf (Key 0) (Value 0)]
 --                 _ -> let ht = h `div` 2

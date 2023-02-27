@@ -114,5 +114,5 @@ flatTest = layoutWith Key Value test
 flatSimplest = layoutWith Key Value simplest
 
 
-simplest :: BinTree Word64 Word64
+simplest :: BinTree Index Index
 simplest = BinNode (BinLeaf 0 1) 0 (BinLeaf 5 6)
