@@ -7,7 +7,7 @@ import           Control.Monad
 import qualified Data.Array as Array
 import qualified Data.Foldable as F
 import qualified Data.List as List
-import qualified Data.Vector as Vector
+import qualified Data.Vector.Storable as Vector
 -- import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import           Test.Hspec
@@ -88,6 +88,9 @@ indicesUsed = concatMap (\case
                             FlatNode l _ r -> [l,r]
                          )
 
+-- indicesUsedV :: Foldable f => f FlatNode -> [Index]
+indicesUsedV = indicesUsed . Vector.toList
+
 --------------------------------------------------------------------------------
 
 
@@ -130,8 +133,14 @@ splitSpec = describe "split based implementation tests" $ do
           t' = asBinTree . toTree h . NonEmpty.fromList $ layout t
       in t == t'
 
+-- instance {-# OVERLAPPING #-} Foldable Vector.Vector where
+--   foldr = Vector.foldr
+
 countLeaves :: Foldable f => f FlatNode -> Capacity
 countLeaves = List.genericLength . filter isLeaf . F.toList
+
+-- countLeavesV :: Foldable f => f FlatNode -> Capacity
+countLeavesV = List.genericLength . filter isLeaf . Vector.toList
 
 cloneSpec :: Spec
 cloneSpec = describe "clone based implementation tests" $ do
@@ -146,14 +155,14 @@ cloneSpec = describe "clone based implementation tests" $ do
 
     forM_ [0..maxHeight] $ \h ->
       it ("clone: number of leaves of height " <> show h <> " correct") $
-        (countLeaves $ structure h) `shouldBe` numLeaves h
+        (countLeavesV $ structure h) `shouldBe` numLeaves h
 
     forM_ [0..maxHeight] $ \h ->
       it ("clone: number of leaves of height " <> show h <> " correct") $
-        (countLeaves $ structure h) `shouldBe` numLeaves h
+        (countLeavesV $ structure h) `shouldBe` numLeaves h
 
     prop "indices used clone" $ \(Inputs' h _xs) ->
-      let is = indicesUsed (structure h)
+      let is = indicesUsedV (structure h)
       in [1..(size h)-1] == List.sort is
 
     forM_ [0..maxHeight] $ \h ->

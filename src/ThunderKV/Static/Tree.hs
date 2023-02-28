@@ -16,8 +16,8 @@ import           Control.DeepSeq
 import           Control.Monad.ST
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
-import           Data.Vector (Vector)
-import qualified Data.Vector as Vector
+import           Data.Vector.Storable (Vector)
+import qualified Data.Vector.Storable as Vector
 -- import           Foreign.Storable
 import           Foreign.Storable.Generic
 import           GHC.Generics (Generic)
