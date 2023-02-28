@@ -3,8 +3,23 @@
 * TODO test querying
 
 
-* TODO switch to Storable vectors
-** TODO storable instances for the sum types
+* DONE switch to Storable vectors
+** DONE storable instances for the sum types
+
+* TODO verify the efficiency of the storable instances
+
+the compiler output says s.t. like:
+
+
+GStorable instances will be optimised in the following order
+    1: FlatNode
+
+Errors while grouping bindings:
+    Could not find any bindings.
+    Is the second pass placed after main simplifier phases ?
+
+
+not sure what that means
 
 
 * TODO implement deletions
