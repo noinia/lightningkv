@@ -89,7 +89,7 @@ indicesUsed = concatMap (\case
                          )
 
 -- indicesUsedV :: Foldable f => f FlatNode -> [Index]
-indicesUsedV = indicesUsed . Vector.toList
+indicesUsedV = indicesUsed . Vector.toList . asArray
 
 --------------------------------------------------------------------------------
 
@@ -140,7 +140,7 @@ countLeaves :: Foldable f => f FlatNode -> Capacity
 countLeaves = List.genericLength . filter isLeaf . F.toList
 
 -- countLeavesV :: Foldable f => f FlatNode -> Capacity
-countLeavesV = List.genericLength . filter isLeaf . Vector.toList
+countLeavesV = List.genericLength . filter isLeaf . Vector.toList . asArray
 
 cloneSpec :: Spec
 cloneSpec = describe "clone based implementation tests" $ do
@@ -193,7 +193,7 @@ testDiverge   :: Height -> Maybe (Index, FlatNode, FlatNode)
 testDiverge h = divergeAt (testFH h) (structure h)
 
 divergeAt       :: Tree -> Tree -> Maybe (Index, FlatNode, FlatNode)
-divergeAt t1 t2 = go 0
+divergeAt (asArray -> t1) (asArray -> t2) = go 0
   where
     go i = case (t1 Vector.! i, t2 Vector.! i) of
              (FlatLeaf _ _, FlatLeaf _ _)       -> Nothing

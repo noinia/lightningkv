@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 module ThunderKV.Static.Tree
   ( Tree
+  , asArray
   , FlatNode(..)
   , isLeaf
   , matchTree
@@ -26,9 +27,20 @@ import           ThunderKV.Static.Types
 
 --------------------------------------------------------------------------------
 
+
 -- | A binary tree embedded as a flat array.
-type Tree = Vector FlatNode
+newtype Tree = Tree (Vector FlatNode)
+  deriving stock (Show,Read,Eq,Ord,Generic)
+  -- deriving newtype (Storable)
+  -- deriving anyclass (GStorable)
+
             -- Array Index FlatNode
+
+instance NFData Tree
+
+-- | Get the flat array storing the nodes
+asArray          :: Tree -> Vector FlatNode
+asArray (Tree a) = a
 
 
 -- type STTree s = STArray.STArray s Index FlatNode
@@ -56,7 +68,7 @@ toTree h = fromNonEmpty h . fmap snd
 
 -- | Given the height and the list of nodes, constructs the tree.
 fromNonEmpty   :: Height -> NonEmpty FlatNode -> Tree
-fromNonEmpty h = Vector.fromListN (size h) . NonEmpty.toList
+fromNonEmpty h = Tree . Vector.fromListN (size h) . NonEmpty.toList
   -- indices in the range [0,size h - 1]
 
 -- | shifts the node to the right by some amount.
@@ -91,11 +103,11 @@ imapTreeWithAcc = undefined
 --------------------------------------------------------------------------------
 
 -- | Pattern match on a Tree
-matchTree             :: (Key -> Value -> r)
-                      -> (r -> Key -> r -> r)
-                      -> Tree
-                      -> r
-matchTree leaf node a = go 0
+matchTree                    :: (Key -> Value -> r)
+                             -> (r -> Key -> r -> r)
+                             -> Tree
+                             -> r
+matchTree leaf node (Tree a) = go 0
   where
     go i = case a Vector.! i of
              FlatLeaf k v   -> leaf k v
