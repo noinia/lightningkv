@@ -1,4 +1,4 @@
-module ThunderKV.Prokob.Clone
+module ThunderKV.Static.Prokob.Clone
   ( structure
   , templates
   , templates'
@@ -17,7 +17,7 @@ import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Semigroup.Foldable
 import           Data.Traversable
 import           ThunderKV.Static.Tree
-import           ThunderKV.Types
+import           ThunderKV.Static.Types
 
 --------------------------------------------------------------------------------
 

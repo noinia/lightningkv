@@ -1,4 +1,4 @@
-module ThunderKV.Prokob
+module ThunderKV.Static.Prokob
   ( split
   , layout
   , layoutWith
@@ -7,8 +7,8 @@ module ThunderKV.Prokob
 -- import           Control.Monad.Writer
 -- import           Data.List.NonEmpty (NonEmpty(..))
 -- import qualified Data.List.NonEmpty as NonEmpty
-import ThunderKV.Types
-import ThunderKV.BinTree
+import ThunderKV.Static.Types
+import ThunderKV.Static.BinTree
 import ThunderKV.Static.Tree
 
 ----------------------------------------

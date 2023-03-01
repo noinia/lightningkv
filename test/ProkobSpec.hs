@@ -13,11 +13,11 @@ import qualified Data.List.NonEmpty as NonEmpty
 import           Test.Hspec
 import           Test.Hspec.QuickCheck
 import           Test.QuickCheck
-import           ThunderKV.BinTree
-import           ThunderKV.Prokob
-import           ThunderKV.Prokob.Clone
+import           ThunderKV.Static.BinTree
+import           ThunderKV.Static.Prokob
+import           ThunderKV.Static.Prokob.Clone
 import           ThunderKV.Static.Tree
-import           ThunderKV.Types
+import           ThunderKV.Static.Types
 --------------------------------------------------------------------------------
 
 deriving newtype instance Arbitrary Key

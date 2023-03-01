@@ -77,12 +77,12 @@ common test-setup
 library
     import:           setup
     exposed-modules:
-        -- ThunderKV.Static
+        -- ThunderKV.Static.Map
         ThunderKV.Static.Tree
-        ThunderKV.Types
-        ThunderKV.BinTree
-        ThunderKV.Prokob
-        ThunderKV.Prokob.Clone
+        ThunderKV.Static.Types
+        ThunderKV.Static.BinTree
+        ThunderKV.Static.Prokob
+        ThunderKV.Static.Prokob.Clone
     -- other-modules:
     -- other-extensions:
     hs-source-dirs:   src

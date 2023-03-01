@@ -1,4 +1,4 @@
-module ThunderKV.Types
+module ThunderKV.Static.Types
   ( Index
   , Height
   , Key(..)

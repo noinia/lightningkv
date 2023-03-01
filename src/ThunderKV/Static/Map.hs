@@ -1,4 +1,4 @@
-module ThunderKV.Static
+module ThunderKV.Static.Static
   ( Map
   , fromAscListPow2
   , lookup
@@ -9,8 +9,8 @@ import           Control.DeepSeq
 -- import           Control.Monad.Writer
 import           Data.Array (Array)
 import qualified Data.Array as Array
-import           ThunderKV.Types
-import           ThunderKV.Prokob
+import           ThunderKV.Static.Types
+import           ThunderKV.Static.Prokob
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Word

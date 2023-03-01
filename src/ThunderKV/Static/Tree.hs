@@ -21,8 +21,8 @@ import qualified Data.Vector.Storable as Vector
 -- import           Foreign.Storable
 import           Foreign.Storable.Generic
 import           GHC.Generics (Generic)
-import           ThunderKV.BinTree
-import           ThunderKV.Types
+import           ThunderKV.Static.BinTree
+import           ThunderKV.Static.Types
 
 --------------------------------------------------------------------------------
 

@@ -1,4 +1,4 @@
-module ThunderKV.BinTree
+module ThunderKV.Static.BinTree
   ( BinTree(..)
   , heightL
   , leavesWithIndex
@@ -16,7 +16,7 @@ import           Data.Functor.WithIndex
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Traversable.WithIndex
-import           ThunderKV.Types
+import           ThunderKV.Static.Types
 
 --------------------------------------------------------------------------------
 
