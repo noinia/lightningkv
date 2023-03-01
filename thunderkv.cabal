@@ -83,6 +83,7 @@ library
         ThunderKV.Static.BinTree
         ThunderKV.Static.Prokob
         ThunderKV.Static.Prokob.Clone
+        ThunderKV.LargeArray
     -- other-modules:
     -- other-extensions:
     hs-source-dirs:   src

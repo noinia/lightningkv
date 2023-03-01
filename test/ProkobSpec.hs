@@ -7,7 +7,7 @@ import           Control.Monad
 import qualified Data.Array as Array
 import qualified Data.Foldable as F
 import qualified Data.List as List
-import qualified Data.Vector.Storable as Vector
+-- import qualified Data.Vector.Storable as Vector
 -- import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import           Test.Hspec
@@ -18,6 +18,8 @@ import           ThunderKV.Static.Prokob
 import           ThunderKV.Static.Prokob.Clone
 import           ThunderKV.Static.Tree
 import           ThunderKV.Static.Types
+import qualified ThunderKV.LargeArray as LargeArray
+
 --------------------------------------------------------------------------------
 
 deriving newtype instance Arbitrary Key
@@ -89,7 +91,7 @@ indicesUsed = concatMap (\case
                          )
 
 -- indicesUsedV :: Foldable f => f FlatNode -> [Index]
-indicesUsedV = indicesUsed . Vector.toList . asArray
+indicesUsedV = indicesUsed . LargeArray.toList . asArray
 
 --------------------------------------------------------------------------------
 
@@ -140,7 +142,7 @@ countLeaves :: Foldable f => f FlatNode -> Capacity
 countLeaves = List.genericLength . filter isLeaf . F.toList
 
 -- countLeavesV :: Foldable f => f FlatNode -> Capacity
-countLeavesV = List.genericLength . filter isLeaf . Vector.toList . asArray
+countLeavesV = List.genericLength . filter isLeaf . LargeArray.toList . asArray
 
 cloneSpec :: Spec
 cloneSpec = describe "clone based implementation tests" $ do
@@ -195,7 +197,7 @@ testDiverge h = divergeAt (testFH h) (structure h)
 divergeAt       :: Tree -> Tree -> Maybe (Index, FlatNode, FlatNode)
 divergeAt (asArray -> t1) (asArray -> t2) = go 0
   where
-    go i = case (t1 Vector.! i, t2 Vector.! i) of
+    go i = case (t1 LargeArray.! i, t2 LargeArray.! i) of
              (FlatLeaf _ _, FlatLeaf _ _)       -> Nothing
              (u@(FlatNode l1 _ r1), v@(FlatNode l2 _ r2))
                | l1 == l2 && r1 == r2 -> go l1 <|> go r1

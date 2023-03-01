@@ -17,19 +17,19 @@ import           Control.DeepSeq
 import           Control.Monad.ST
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
-import           Data.Vector.Storable (Vector)
-import qualified Data.Vector.Storable as Vector
 -- import           Foreign.Storable
 import           Foreign.Storable.Generic
 import           GHC.Generics (Generic)
 import           ThunderKV.Static.BinTree
 import           ThunderKV.Static.Types
+import           ThunderKV.LargeArray (LargeArray)
+import qualified ThunderKV.LargeArray as LargeArray
 
 --------------------------------------------------------------------------------
 
 
 -- | A binary tree embedded as a flat array.
-newtype Tree = Tree (Vector FlatNode)
+newtype Tree = Tree (LargeArray FlatNode)
   deriving stock (Show,Read,Eq,Ord,Generic)
   -- deriving newtype (Storable)
   -- deriving anyclass (GStorable)
@@ -39,7 +39,7 @@ newtype Tree = Tree (Vector FlatNode)
 instance NFData Tree
 
 -- | Get the flat array storing the nodes
-asArray          :: Tree -> Vector FlatNode
+asArray          :: Tree -> LargeArray FlatNode
 asArray (Tree a) = a
 
 
@@ -68,7 +68,7 @@ toTree h = fromNonEmpty h . fmap snd
 
 -- | Given the height and the list of nodes, constructs the tree.
 fromNonEmpty   :: Height -> NonEmpty FlatNode -> Tree
-fromNonEmpty h = Tree . Vector.fromListN (size h) . NonEmpty.toList
+fromNonEmpty h = Tree . LargeArray.fromListN (size h) . NonEmpty.toList
   -- indices in the range [0,size h - 1]
 
 -- | shifts the node to the right by some amount.
@@ -109,7 +109,7 @@ matchTree                    :: (Key -> Value -> r)
                              -> r
 matchTree leaf node (Tree a) = go 0
   where
-    go i = case a Vector.! i of
+    go i = case a LargeArray.! i of
              FlatLeaf k v   -> leaf k v
              FlatNode l k r -> node (go l) k (go r)
 {-# INLINE matchTree #-}
