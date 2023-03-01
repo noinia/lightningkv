@@ -41,10 +41,6 @@ essentially mark these items as deleted at time 0.
 
 * TODO support storing items on disk
 
-** TODO mmap-array
-
-maeke a version of mmap-vector that uses Array instead.
-
 
 
 
