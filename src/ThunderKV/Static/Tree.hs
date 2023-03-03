@@ -79,6 +79,25 @@ shiftRightBy delta = \case
 
 --------------------------------------------------------------------------------
 
+-- | Overwrites the keys and values in the tree with the given ones.
+-- assumes the keys are given in ascending order.
+fillAsc               :: [(Key,Value)] -> Tree -> Tree
+fillAsc xs (Tree arr) = Tree . snd $ LargeArray.imapAccumL f xs arr
+  where
+    f i kvs = \case
+      FlatLeaf _ _   -> case kvs of
+                          []         -> error "fillAsc: Too few elements!!"
+                          (k,v):kvs' -> (kvs',FlatLeaf k v)
+      node           -> (kvs, node)
+
+-- fillAsc xs t = imapTreeWithAcc t node leaf
+--   where
+
+
+
+
+
+
 imapTreeWithAcc :: (Index -> Key -> Value -> (Key, Value,acc))
                 -> (acc -> Key -> acc -> (Key, acc))
                 -> Tree
@@ -99,6 +118,9 @@ imapTreeWithAcc = undefined
 --                      -> Array
 --                      -> ST s (STTree s, acc)
 -- matchTreeM leaf node = undefined
+
+
+
 
 --------------------------------------------------------------------------------
 

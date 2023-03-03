@@ -32,6 +32,7 @@ common setup
       , primitive              ^>= 0.7.4.0
       , vector-mmap            ^>= 0.0.3
       , vector                 ^>= 0.13
+      , transformers           >= 0.5
 
       , derive-storable        ^>= 0.3.1.0
       , derive-storable-plugin ^>= 0.2.3.6
