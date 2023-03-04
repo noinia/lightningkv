@@ -32,10 +32,18 @@ pattern Inputs' h xs = Inputs h xs
 maxHeight :: Height
 maxHeight = 4
 
+arbitrarySized    :: Height -> Gen Inputs
+arbitrarySized h = Inputs h <$> (genPow2 h $ arbitrary `suchThat` (\(k,_) -> k > Key 0))
+
+arbitraryMaxSize      :: Height -> Gen Inputs
+arbitraryMaxSize maxH = do h <- chooseBoundedIntegral (0,maxH)
+                           arbitrarySized h
+
+
+
 instance Arbitrary Inputs where
   -- generates striclty positive keys
-  arbitrary = do h <- chooseBoundedIntegral (0,8)
-                 Inputs h <$> (genPow2 h $ arbitrary `suchThat` (\(k,_) -> k > Key 0))
+  arbitrary = arbitraryMaxSize 8
   shrink (Inputs h xs) = [ Inputs i (NonEmpty.fromList $ NonEmpty.take (2^i) xs)
                          | i <- upTo h
                          ]

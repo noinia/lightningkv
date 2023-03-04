@@ -1,6 +1,12 @@
 
 * TODO fix bu in unpacking the nodeWithMax
 
+apparently  support for unpacking sums has finally landed in GHC 9.6
+https://gitlab.haskell.org/ghc/ghc/-/merge_requests/4140
+
+that essentially means the NodeWithMax stuff in Static.Tree works only
+as expected on 9.6 and up
+
 * DONE test querying
 
 

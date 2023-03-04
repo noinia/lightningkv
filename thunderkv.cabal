@@ -108,3 +108,18 @@ test-suite thunderkv-hspec
         ArraySpec
     build-depends:
         thunderkv
+
+--------------------------------------------------------------------------------
+
+benchmark thunderkv-bench
+  import: setup, test-setup
+  type:          exitcode-stdio-1.0
+  ghc-options: -with-rtsopts=-A32m -fproc-alignment=64
+  hs-source-dirs:   bench, test
+  main-is:       StaticBench.hs
+  other-modules:
+    Input
+  build-depends:
+      thunderkv
+    , tasty-bench          >= 0.3
+    , containers           >= 0.6

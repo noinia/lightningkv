@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -fplugin=Foreign.Storable.Generic.Plugin #-}
 {-# OPTIONS_GHC -fplugin-opt=Foreign.Storable.Generic.Plugin:-v1 #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE UnboxedSums #-}
 module ThunderKV.Static.Tree
   ( Tree
   , SubTree
@@ -60,6 +61,22 @@ asArray (Tree a) = a
 -- | convert into a subtree (that just represents the entire tree)
 asSubTree :: Tree -> SubTree
 asSubTree = SubTree 0
+
+
+-- data FlatLeaf' = FlatLeaf' {-# UNPACK #-} !Key {-# UNPACK #-} !Value
+--               deriving stock (Show,Read,Eq,Ord,Generic)
+--               deriving anyclass (GStorable)
+-- instance NFData FlatLeaf'
+
+-- data FlatNode' = FlatNode' {-# UNPACK #-} !Index
+--                            {-# UNPACK #-} !Key
+--                            {-# UNPACK #-} !Index
+--               deriving stock (Show,Read,Eq,Ord,Generic)
+--               deriving anyclass (GStorable)
+-- instance NFData FlatNode'
+
+-- type FlatNode'' = ()
+
 
 
 -- | The nodes of our embeded tree
@@ -133,10 +150,8 @@ fillDesc xs (Tree arr) = Tree
     -- can just replace them from right to left by elements in decreasing order.
 
 -- | Node that also stores a subtree maximum.
-data NodeWithMax = NodeWithMax !FlatNode {-# UNPACK #-}!Key
+data NodeWithMax = NodeWithMax {-# UNPACK #-}!FlatNode {-# UNPACK #-}!Key
   deriving (Show,Generic,GStorable)
-
--- FIXME: we should make sure to unpack the flatnode!!!
 
 
 --------------------------------------------------------------------------------
