@@ -84,6 +84,7 @@ library
         ThunderKV.Static.BinTree
         ThunderKV.Static.Prokob
         ThunderKV.Static.Prokob.Clone
+        ThunderKV.Static.Prokob.FromBinTree
         ThunderKV.LargeArray
     -- other-modules:
     -- other-extensions:
@@ -98,7 +99,10 @@ test-suite thunderkv-hspec
     main-is:          Main.hs
     other-modules:
         Spec
+        Input
         ProkobSpec
+        Prokob.CloneSpec
+        Prokob.FromBinTreeSpec
         ArraySpec
     build-depends:
         thunderkv
