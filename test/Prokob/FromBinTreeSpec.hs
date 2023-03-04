@@ -1,16 +1,11 @@
 module Prokob.FromBinTreeSpec where
 
-import           Control.Applicative
-import           Control.Monad
-import qualified Data.Array as Array
 import qualified Data.Foldable as F
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import           Input
 import           Test.Hspec
 import           Test.Hspec.QuickCheck
-import           Test.QuickCheck
-import qualified ThunderKV.LargeArray as LargeArray
 import           ThunderKV.Static.BinTree ( BinTree(..)
                                           , heightL
                                           )

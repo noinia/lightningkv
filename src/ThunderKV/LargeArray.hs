@@ -6,7 +6,9 @@ module ThunderKV.LargeArray
   , imapAccumL, unsafeImapAccumL
   , imapAccumR, unsafeImapAccumR
   , length
-  , mapR
+  , mapr
+  , foldr
+  , foldl
   , indicesLR, indicesRL
 
   , MLargeArray
@@ -30,7 +32,7 @@ import qualified Data.Vector.Storable as Vector
 import qualified Data.Vector.Storable.Mutable as MVector
 import           Foreign.Storable
 import           GHC.Generics (Generic)
-import           Prelude hiding (read, length)
+import           Prelude hiding (read, length, foldr, foldl)
 import           ThunderKV.Static.Types
 
 --------------------------------------------------------------------------------
@@ -60,6 +62,13 @@ toList = Vector.toList . toVector
 length :: Storable a => LargeArray a -> Index
 length = Vector.length . toVector
 
+-- | Traverse the array right to left accumulating the result
+foldr     :: Storable a => (a -> b -> b) -> b -> LargeArray a -> b
+foldr f z = Vector.foldr f z . toVector
+
+-- | Traverse the array left to right accumulating the result
+foldl     :: Storable a => (b -> a -> b) -> b -> LargeArray a -> b
+foldl f z = Vector.foldl f z . toVector
 
 --------------------------------------------------------------------------------
 
@@ -102,10 +111,10 @@ data WithIndex a = WithIndex {-# UNPACK #-}!Index a
 ----------------------------------------
 
 -- | map, going from right to left
-mapR       :: ( Storable a
+mapr       :: ( Storable a
               , Storable b
               ) => (a -> b) -> LargeArray a -> LargeArray b
-mapR f arr = runST $ do mArr <- unsafeNew (length arr)
+mapr f arr = runST $ do mArr <- unsafeNew (length arr)
                         forM_ (indicesRL arr) $ \i ->
                           write mArr i (f $ arr ! i)
                         unsafeFreeze mArr

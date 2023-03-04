@@ -11,6 +11,6 @@ spec = describe "LargeArray tests" $ do
            let f = (+5) :: Int -> Int
                xs = [1..5]
                vs = LargeArray.toList
-                  . LargeArray.mapR f
+                  . LargeArray.mapr f
                   . LargeArray.fromListN (length xs) $ xs
            vs `shouldBe` map f xs

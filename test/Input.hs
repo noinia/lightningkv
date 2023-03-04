@@ -16,9 +16,9 @@ import           ThunderKV.Static.BinTree
 import           ThunderKV.Static.Prokob
 import qualified ThunderKV.Static.Prokob.Clone       as Clone
 import qualified ThunderKV.Static.Prokob.FromBinTree as FromBinTree
-
 import           ThunderKV.Static.Tree
 import           ThunderKV.Static.Types
+import qualified ThunderKV.Static.Map as Map
 import qualified ThunderKV.LargeArray as LargeArray
 
 --------------------------------------------------------------------------------
@@ -40,12 +40,25 @@ pattern Inputs' h xs = Inputs h xs
 maxHeight :: Height
 maxHeight = 4
 
-instance (Arbitrary a) => Arbitrary (Inputs' a) where
+instance Arbitrary Inputs where
+  -- generates striclty positive keys
   arbitrary = do h <- chooseBoundedIntegral (0,8)
-                 Inputs h <$> genPow2 h arbitrary
+                 Inputs h <$> (genPow2 h $ arbitrary `suchThat` (\(k,v) -> k > Key 0))
   shrink (Inputs h xs) = [ Inputs i (NonEmpty.fromList $ NonEmpty.take (2^i) xs)
                          | i <- upTo h
                          ]
 upTo h = case h of
            0 -> []
            _ -> [0..h -1]
+
+fromInputs (Inputs h xs) = Map.fromDescListPow2 h (NonEmpty.reverse xs)
+
+toInputs m = Inputs (Map.heightOf m) (Map.toAscList m)
+
+
+asUniqueKeys (Inputs h xs) =
+  Inputs h $ NonEmpty.scanl1 (\(Key acc,_) (Key k,v) -> (Key $ acc+k,v)) xs
+
+instance Arbitrary Map.Map where
+  arbitrary = fromInputs . asUniqueKeys <$> arbitrary
+  shrink = map fromInputs . shrink . toInputs

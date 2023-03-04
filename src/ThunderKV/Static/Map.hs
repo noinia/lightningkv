@@ -1,8 +1,11 @@
-module ThunderKV.Static.Static
+module ThunderKV.Static.Map
   ( Map
-  , fromAscListPow2
+  , heightOf
+  , fromDescListPow2
+  , toAscList, toDescList
   , lookup
   , lookupGE
+  , lookupLE
   ) where
 
 import           Control.DeepSeq
@@ -10,7 +13,9 @@ import           Control.DeepSeq
 import           Data.Array (Array)
 import qualified Data.Array as Array
 import           ThunderKV.Static.Types
-import           ThunderKV.Static.Prokob
+import qualified ThunderKV.Static.Prokob as Tree
+import           ThunderKV.Static.Prokob (Tree
+                                         )
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Word
@@ -19,52 +24,51 @@ import           Prelude hiding (lookup)
 
 --------------------------------------------------------------------------------
 
-newtype Map = Map Tree
-  deriving stock (Show,Read,Generic)
-  deriving newtype (Eq,Ord,NFData)
+-- | The map will be non-empty
+data Map = Map {-# UNPACK #-}!Height Tree
+  deriving stock (Eq,Ord,Show,Read,Generic)
+
+instance NFData Map
+
+-- | Get the underlying Tree
+asBST           :: Map -> Tree
+asBST (Map _ t) = t
+
+-- | Height of the underlying BST
+heightOf           :: Map -> Height
+heightOf (Map h _) = h
 
 --------------------------------------------------------------------------------
 
-fromAscListPow2 :: [(Key, Value)] -> Map
-fromAscListPow2 = undefined
+-- | construct the map
+fromDescListPow2      :: Height -> NonEmpty (Key, Value) -> Map
+fromDescListPow2 h xs = Map h $ Tree.fromDescListPow2 h xs
+{-# INLINE fromDescListPow2 #-}
 
 
+toAscList :: Map -> NonEmpty (Key,Value)
+toAscList = Tree.toAscList . asBST
+
+toDescList :: Map -> NonEmpty (Key,Value)
+toDescList = Tree.toDescList . asBST
+
+
+-- | Lookup a key in the map
 lookup     :: Key -> Map -> Maybe Value
 lookup q m = case lookupGE q m of
                Just (q',v) | q == q' -> Just v
                _                     -> Nothing
 {-# INLINE lookup #-}
 
-
-lookupGE          :: Key -> Map -> Maybe (Key, Value)
-lookupGE q (Map t) = matchTree leaf node t
-  where
-    leaf k v | q <= k    = Just (k,v)
-             | otherwise = Nothing
-    node l k r | q <= k    = l
-               | otherwise = r
+-- | Successor search
+lookupGE   :: Key -> Map -> Maybe (Key, Value)
+lookupGE q = Tree.lookupGE q . asBST
 {-# INLINE lookupGE #-}
 
+-- | Predecessor search
 lookupLE          :: Key -> Map -> Maybe (Key, Value)
-lookupLE q (Map t) = matchTree leaf node t LEMode
-  where
-    leaf                 :: Key -> Value -> LEMode -> Maybe (Key,Value)
-    leaf k v = \case
-      MaxMode            -> Just (k,v)
-      LEMode | k <= q    -> Just (k,v)
-             | otherwise -> Nothing
-
-    node                  :: (LEMode -> Maybe (Key,Value))
-                          -> Key
-                          -> (LEMode -> Maybe (Key,Value))
-                          -> LEMode -> Maybe (Key,Value)
-    node l k r = \case
-      MaxMode            -> r MaxMode
-      LEMode | q <= k    -> l LEMode
-             | otherwise -> r LEMode <|> l MaxMode
-{-# INLINE lookupGE #-}
-
-data LEMode = LEMode | MaxMode
+lookupLE q = Tree.lookupLE q . asBST
+{-# INLINE lookupLE #-}
 
 -- lookupGEDeleted           :: Key -> Map -> Maybe (Key, Value)
 -- lookupGEDeleted q (Map t) = undefined leaf node t
@@ -100,19 +104,3 @@ data LEMode = LEMode | MaxMode
 
 --     now = Version 0
 --     maxL = undefined
-
-
---------------------------------------------------------------------------------
-
--- arrayFromList :: [(Index,a)] -> []
-
-
-
--- flatTest :: Tree
-flatTest = layoutWith Key Value test
-
-flatSimplest = layoutWith Key Value simplest
-
-
-simplest :: BinTree Index Index
-simplest = BinNode (BinLeaf 0 1) 0 (BinLeaf 5 6)

@@ -31,12 +31,19 @@ type Size = Index
 
 -- | Measures the height of the tree, leaves have height 0
 newtype Height = Height Word8
+  deriving stock (Generic)
   deriving newtype (Show,Read,Eq,Ord,Num,Real,Enum,Bounded,Integral,Ix)
+
+instance NFData Height
 
 
 -- | Models the number of elements that we can store in our trees.
 newtype Capacity = Capacity Index
+  deriving stock (Generic)
   deriving newtype (Show,Read,Eq,Ord,Num,Real,Enum,Integral,Ix)
+
+instance NFData Capacity
+
 
 -- | Interpet a capacity as a size.
 asSize              :: Capacity -> Size

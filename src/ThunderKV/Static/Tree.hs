@@ -3,7 +3,10 @@
 {-# LANGUAGE DeriveAnyClass #-}
 module ThunderKV.Static.Tree
   ( Tree
+  , SubTree
   , asArray
+  , asSubTree
+  , toAscList, toDescList
   , FlatNode(..)
   , isLeaf
   , matchTree
@@ -12,11 +15,14 @@ module ThunderKV.Static.Tree
   , fromNonEmpty
   , shiftRightBy
   , fillDesc
+  , lookupGE
+  , lookupLE
 
   , minimum
   , maximum
   ) where
 
+import           Control.Applicative ((<|>))
 import           Control.DeepSeq
 import           Control.Monad.ST
 import           Data.List.NonEmpty (NonEmpty(..))
@@ -40,12 +46,22 @@ newtype Tree = Tree (LargeArray FlatNode)
   -- deriving anyclass (GStorable)
 
             -- Array Index FlatNode
-
 instance NFData Tree
+
+data SubTree = SubTree {-# UNPACK #-}!Index -- index of the root of the subtree
+                       {-#UNPACK #-}!Tree
+  deriving stock (Show,Read,Eq,Ord,Generic)
+
+instance NFData SubTree
+
 
 -- | Get the flat array storing the nodes
 asArray          :: Tree -> LargeArray FlatNode
 asArray (Tree a) = a
+
+-- | convert into a subtree (that just represents the entire tree)
+asSubTree :: Tree -> SubTree
+asSubTree = SubTree 0
 
 
 -- type STTree s = STArray.STArray s Index FlatNode
@@ -88,7 +104,7 @@ shiftRightBy delta = \case
 -- assumes the keys are given in descending order.
 fillDesc               :: [(Key,Value)] -> Tree -> Tree
 fillDesc xs (Tree arr) = Tree
-                       . LargeArray.mapR (\(NodeWithMax n _) -> n)
+                       . LargeArray.mapr (\(NodeWithMax n _) -> n)
                        $ runST $ do mArr <- LargeArray.unsafeNew n
                                     go mArr xs (LargeArray.indicesRL arr)
                                     LargeArray.unsafeFreeze mArr
@@ -189,16 +205,25 @@ data NodeWithMax = NodeWithMax {-# UNPACK #-}!FlatNode {-# UNPACK #-}!Key
 --------------------------------------------------------------------------------
 
 -- | Pattern match on a Tree
-matchTree                    :: (Key -> Value -> r)
-                             -> (r -> Key -> r -> r)
-                             -> Tree
-                             -> r
-matchTree leaf node (Tree a) = go 0
+matchTree           :: (Key -> Value -> r)
+                    -> (r -> Key -> r -> r)
+                    -> Tree
+                    -> r
+matchTree leaf node = matchSubTree leaf node . SubTree 0
+{-# INLINE matchTree #-}
+
+-- | on subtree
+matchSubTree                                 :: (Key -> Value -> r)
+                                             -> (r -> Key -> r -> r)
+                                             -> SubTree
+                                             -> r
+matchSubTree leaf node (SubTree r  (Tree a)) = go r
   where
     go i = case a LargeArray.! i of
              FlatLeaf k v   -> leaf k v
              FlatNode l k r -> node (go l) k (go r)
-{-# INLINE matchTree #-}
+{-# INLINE matchSubTree #-}
+
 
 --------------------------------------------------------------------------------
 
@@ -231,9 +256,46 @@ asBinTree = matchTree BinLeaf BinNode
 --------------------------------------------------------------------------------
 
 -- | gets the largest key,value pair in the tree
-maximum :: Tree -> (Key,Value)
-maximum = matchTree (\k v -> (k,v)) (\_ _ r -> r)
+maximum :: SubTree -> (Key,Value)
+maximum = matchSubTree (\k v -> (k,v)) (\_ _ r -> r)
 
 -- | gets the smallest key,value pair in the tree.
-minimum :: Tree -> (Key,Value)
-minimum = matchTree (\k v -> (k,v)) (\l _ _ -> l)
+minimum :: SubTree -> (Key,Value)
+minimum = matchSubTree (\k v -> (k,v)) (\l _ _ -> l)
+
+lookupGE   :: Key -> Tree -> Maybe (Key, Value)
+lookupGE q = matchTree leaf node
+  where
+    leaf k v | q <= k    = Just (k,v)
+             | otherwise = Nothing
+    node l k r | q <= k    = l
+               | otherwise = r
+{-# INLINE lookupGE #-}
+
+lookupLE                :: Key -> Tree -> Maybe (Key, Value)
+lookupLE q t@(Tree arr) = go 0
+  where
+    go i = case arr LargeArray.! i of
+      FlatLeaf k v | q <= k    -> Just (k,v)
+                   | otherwise -> Nothing
+      FlatNode l k r | q <= k  -> go l
+                 | otherwise   -> go r <|> Just (maximum $ SubTree l t)
+{-# INLINE lookupLE #-}
+
+--------------------------------------------------------------------------------
+
+
+toAscList :: Tree -> NonEmpty (Key,Value)
+toAscList = NonEmpty.fromList . LargeArray.foldr (\n acc -> extractLeaf n `consM` acc) [] . asArray
+
+
+toDescList :: Tree -> NonEmpty (Key,Value)
+toDescList = NonEmpty.fromList . LargeArray.foldl (\acc n -> extractLeaf n `consM` acc) [] . asArray
+  where
+    snoc xs mx = maybe xs (:xs) mx
+
+consM mh tl = maybe tl (:tl) mh
+
+extractLeaf = \case
+  FlatLeaf k v -> Just (k,v)
+  _            -> Nothing
