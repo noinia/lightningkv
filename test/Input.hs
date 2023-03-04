@@ -47,15 +47,19 @@ instance Arbitrary Inputs where
   shrink (Inputs h xs) = [ Inputs i (NonEmpty.fromList $ NonEmpty.take (2^i) xs)
                          | i <- upTo h
                          ]
+upTo   :: Height -> [Height]
 upTo h = case h of
            0 -> []
            _ -> [0..h -1]
 
+fromInputs :: Inputs -> Map.Map
 fromInputs (Inputs h xs) = Map.fromDescListPow2 h (NonEmpty.reverse xs)
 
+toInputs   :: Map.Map -> Inputs
 toInputs m = Inputs (Map.heightOf m) (Map.toAscList m)
 
-
+-- | Make sure the keys are unique; since all keys are strictly positive we just keep summing them.
+asUniqueKeys               :: Inputs -> Inputs
 asUniqueKeys (Inputs h xs) =
   Inputs h $ NonEmpty.scanl1 (\(Key acc,_) (Key k,v) -> (Key $ acc+k,v)) xs
 

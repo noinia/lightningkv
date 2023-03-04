@@ -276,7 +276,7 @@ lookupLE                :: Key -> Tree -> Maybe (Key, Value)
 lookupLE q t@(Tree arr) = go 0
   where
     go i = case arr LargeArray.! i of
-      FlatLeaf k v | q <= k    -> Just (k,v)
+      FlatLeaf k v | k <= q    -> Just (k,v)
                    | otherwise -> Nothing
       FlatNode l k r | q <= k  -> go l
                  | otherwise   -> go r <|> Just (maximum $ SubTree l t)
