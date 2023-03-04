@@ -11,13 +11,8 @@ import           Input
 import qualified Data.List.NonEmpty as NonEmpty
 import           Test.Hspec
 import           Test.Hspec.QuickCheck
-import           Test.QuickCheck
 import qualified ThunderKV.Static.BinTree as BinTree
-import           ThunderKV.Static.BinTree ( BinTree(..)
-                                          , heightL
-                                          )
 import           ThunderKV.Static.Prokob
-import qualified ThunderKV.Static.Prokob.FromBinTree
 import           ThunderKV.Static.Prokob.Clone
 import qualified ThunderKV.Static.Tree as Tree
 import           ThunderKV.Static.Tree ( Tree
@@ -74,11 +69,11 @@ spec = describe "clone based implementation tests" $ do
           tc  = fromDescListPow2 h (NonEmpty.reverse xs)
       in t' == tc
 
-    -- this one still fails, but that is ok for now
-    xprop "reconstruct" $ \(Inputs' h xs) ->
-      let t  = BinTree.fromAscListPow2 xs
-          t' = Tree.asBinTree $ structure h
-      in t == t'
+    prop "reconstruct" $ \(Inputs' h xs) ->
+      let bt = BinTree.fromAscListPow2 xs
+          t  = fromDescListPow2 h (NonEmpty.reverse xs)
+          t' = Tree.asBinTree t
+      in bt == t'
 
 filled      :: Height -> NonEmpty.NonEmpty (Key,Value) -> Tree
 filled h xs = Tree.fillDesc (reverse $ F.toList xs) $ structure h
