@@ -119,10 +119,14 @@ mapr f arr = runST $ do mArr <- unsafeNew (length arr)
                           write mArr i (f $ arr ! i)
                         unsafeFreeze mArr
 
+-- | Produce the list of array indices in left to right order
+indicesLR     :: Storable a => LargeArray a -> [Index]
 indicesLR arr = case length arr of
                   0 -> []
                   n -> [0..n-1]
 
+-- | Produce the list of array indices in right to left order
+indicesRL     :: Storable a => LargeArray a -> [Index]
 indicesRL arr = case length arr of
                   0 -> []
                   n -> tail $ [n,n-1..0]

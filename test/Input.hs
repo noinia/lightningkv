@@ -1,22 +1,14 @@
 module Input where
 
-
-import           Control.Applicative
 import           Control.Monad
-import qualified Data.Array as Array
-import qualified Data.Foldable as F
-import qualified Data.List as List
 -- import qualified Data.Vector.Storable as Vector
 -- import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
-import           Test.Hspec
-import           Test.Hspec.QuickCheck
 import           Test.QuickCheck
-import           ThunderKV.Static.BinTree
-import           ThunderKV.Static.Prokob
-import qualified ThunderKV.Static.Prokob.Clone       as Clone
-import qualified ThunderKV.Static.Prokob.FromBinTree as FromBinTree
-import           ThunderKV.Static.Tree
+-- import           ThunderKV.Static.BinTree
+-- import           ThunderKV.Static.Prokob
+-- import           ThunderKV.Static.Tree
+import           Foreign.Storable
 import           ThunderKV.Static.Types
 import qualified ThunderKV.Static.Map as Map
 import qualified ThunderKV.LargeArray as LargeArray
@@ -43,7 +35,7 @@ maxHeight = 4
 instance Arbitrary Inputs where
   -- generates striclty positive keys
   arbitrary = do h <- chooseBoundedIntegral (0,8)
-                 Inputs h <$> (genPow2 h $ arbitrary `suchThat` (\(k,v) -> k > Key 0))
+                 Inputs h <$> (genPow2 h $ arbitrary `suchThat` (\(k,_) -> k > Key 0))
   shrink (Inputs h xs) = [ Inputs i (NonEmpty.fromList $ NonEmpty.take (2^i) xs)
                          | i <- upTo h
                          ]
@@ -62,6 +54,11 @@ toInputs m = Inputs (Map.heightOf m) (Map.toAscList m)
 asUniqueKeys               :: Inputs -> Inputs
 asUniqueKeys (Inputs h xs) =
   Inputs h $ NonEmpty.scanl1 (\(Key acc,_) (Key k,v) -> (Key $ acc+k,v)) xs
+
+
+instance (Arbitrary a, Storable a) => Arbitrary (LargeArray.LargeArray a) where
+  arbitrary = do n <- arbitrary `suchThat` (>= 0)
+                 LargeArray.fromListN n <$> arbitrary
 
 instance Arbitrary Map.Map where
   arbitrary = fromInputs . asUniqueKeys <$> arbitrary

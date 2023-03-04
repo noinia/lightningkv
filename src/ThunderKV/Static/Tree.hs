@@ -29,7 +29,6 @@ import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 -- import           Foreign.Storable
 import           Foreign.Storable.Generic
-import           Foreign.Storable
 import           GHC.Generics (Generic)
 import           ThunderKV.Static.BinTree
 import           ThunderKV.Static.Types
@@ -45,13 +44,12 @@ newtype Tree = Tree (LargeArray FlatNode)
   -- deriving newtype (Storable)
   -- deriving anyclass (GStorable)
 
-            -- Array Index FlatNode
-instance NFData Tree
-
+-- | Subtree of a binary tree.
 data SubTree = SubTree {-# UNPACK #-}!Index -- index of the root of the subtree
                        {-#UNPACK #-}!Tree
   deriving stock (Show,Read,Eq,Ord,Generic)
 
+instance NFData Tree
 instance NFData SubTree
 
 
@@ -62,9 +60,6 @@ asArray (Tree a) = a
 -- | convert into a subtree (that just represents the entire tree)
 asSubTree :: Tree -> SubTree
 asSubTree = SubTree 0
-
-
--- type STTree s = STArray.STArray s Index FlatNode
 
 
 -- | The nodes of our embeded tree
@@ -104,7 +99,7 @@ shiftRightBy delta = \case
 -- assumes the keys are given in descending order.
 fillDesc               :: [(Key,Value)] -> Tree -> Tree
 fillDesc xs (Tree arr) = Tree
-                       . LargeArray.mapr (\(NodeWithMax n _) -> n)
+                       . LargeArray.mapr (\(NodeWithMax n' _) -> n')
                        $ runST $ do mArr <- LargeArray.unsafeNew n
                                     go mArr xs (LargeArray.indicesRL arr)
                                     LargeArray.unsafeFreeze mArr
@@ -121,10 +116,10 @@ fillDesc xs (Tree arr) = Tree
                      go mArr kvs' is
       where
         f       :: Index -> [(Key,Value)] -> FlatNode -> ST s ([(Key,Value)], NodeWithMax)
-        f i kvs = \case
-          FlatLeaf _ _   -> pure $ case kvs of
-                              []         -> error "fillDesc: too few elements"
-                              (k,v):kvs' -> (kvs', NodeWithMax (FlatLeaf k v) k)
+        f _ kvs' = \case
+          FlatLeaf _ _   -> pure $ case kvs' of
+                              []          -> error "fillDesc: too few elements"
+                              (k,v):kvs'' -> (kvs'', NodeWithMax (FlatLeaf k v) k)
           FlatNode l _ r -> do NodeWithMax _ m <- LargeArray.read mArr r
                                NodeWithMax _ k <- LargeArray.read mArr l
                                pure $ (kvs, NodeWithMax (FlatNode l k r) m)
@@ -137,69 +132,11 @@ fillDesc xs (Tree arr) = Tree
     -- moreover, the leaves appear in sorted order in the array. So we
     -- can just replace them from right to left by elements in decreasing order.
 
-
-
-
-
-        --
-
-  -- . snd $ LargeArray.imapAccumL f xs arr
-  -- where
-  --   f _ kvs = \case
-  --     FlatLeaf _ _   -> case kvs of
-  --                         []         -> error "fillAsc: Too few elements!!"
-  --                         (k,v):kvs' -> (kvs',FlatLeaf k v)
-  --     node           -> (kvs, node)
-  -- todo; fold te keys
--- FIXME: if you get the keys in decreasin order, we can fuse the scan; i.e. so that we need only 2 passes rather than 3
-
-data NodeWithMax = NodeWithMax {-# UNPACK #-}!FlatNode {-# UNPACK #-}!Key
+-- | Node that also stores a subtree maximum.
+data NodeWithMax = NodeWithMax !FlatNode {-# UNPACK #-}!Key
   deriving (Show,Generic,GStorable)
 
--- unsafeRecomputeKeys            :: Tree -> Tree
--- unsafeRecomputeKeys (Tree arr) = Tree . snd $
-
---   LargeArray.mapR f arr
---   where
---     f = \case
---       leaf@(FlatLeaf k _) -> NodeWithMax leaf k
---       FlatNode l _ r      -> let k =
---                                  m = arr ! r
---                              in NodeWithMax (FlatNode l k r)
-
-
-
-
--- fillAsc xs t = imapTreeWithAcc t node leaf
---   where
-
-
-
-
-
-
--- imapTreeWithAcc :: (Index -> Key -> Value -> (Key, Value,acc))
---                 -> (acc -> Key -> acc -> (Key, acc))
---                 -> Tree
---                 -> (Tree,acc)
--- imapTreeWithAcc = undefined
-
--- unsafeImapTreeWithAcc             :: (Index -> Key -> Value -> (Key, Value,acc))
---                                   -> (acc -> Key -> acc -> (Key, acc))
---                                   -> Tree
---                                   -> (Tree,acc)
--- unsafeImapTreeWithAcc leaf node t = runST ( Array.Unsafe.unsafeFreeze
---                                           . matchTreeM leaf node
---                                           . Array.Unsafe.unsafeThaw $ t
---                                           )
-
--- matchTreeM           :: (Index -> Key -> Value -> (Key, Value,acc))
---                      -> (acc -> Key -> acc -> (Key, acc))
---                      -> Array
---                      -> ST s (STTree s, acc)
--- matchTreeM leaf node = undefined
-
-
+-- FIXME: we should make sure to unpack the flatnode!!!
 
 
 --------------------------------------------------------------------------------
@@ -217,7 +154,7 @@ matchSubTree                                 :: (Key -> Value -> r)
                                              -> (r -> Key -> r -> r)
                                              -> SubTree
                                              -> r
-matchSubTree leaf node (SubTree r  (Tree a)) = go r
+matchSubTree leaf node (SubTree r0  (Tree a)) = go r0
   where
     go i = case a LargeArray.! i of
              FlatLeaf k v   -> leaf k v
@@ -232,27 +169,6 @@ asBinTree :: Tree -> BinTree Key Value
 asBinTree = matchTree BinLeaf BinNode
 {-# INLINE asBinTree #-}
 
-
-
-
--- matchTreeA             :: Applicative f
---                        => (Index -> Key -> Value -> f (Key,Value))
---                        -> (f () -> Key -> f () -> f Key)
---                        => Tree
---                        -> f Tree
--- matchTreeA leaf node a = go 0
---   where
---     go i = case a Vector.! i of
---              FlatLeaf k v -> curry FlatLeaf <$> leaf i k v
-
-
-
--- -- | Overwrites the keys and values in the tree with the given ones.
--- -- assumes the keys are given in ascending order.
--- fillAsc      :: Tree' -> [(Key,Value)] -> Tree'
--- fillAsc t xs =
-
-
 --------------------------------------------------------------------------------
 
 -- | gets the largest key,value pair in the tree
@@ -263,6 +179,7 @@ maximum = matchSubTree (\k v -> (k,v)) (\_ _ r -> r)
 minimum :: SubTree -> (Key,Value)
 minimum = matchSubTree (\k v -> (k,v)) (\l _ _ -> l)
 
+-- | Successor search
 lookupGE   :: Key -> Tree -> Maybe (Key, Value)
 lookupGE q = matchTree leaf node
   where
@@ -272,6 +189,7 @@ lookupGE q = matchTree leaf node
                | otherwise = r
 {-# INLINE lookupGE #-}
 
+-- | Predecessor search
 lookupLE                :: Key -> Tree -> Maybe (Key, Value)
 lookupLE q t@(Tree arr) = go 0
   where
@@ -291,11 +209,11 @@ toAscList = NonEmpty.fromList . LargeArray.foldr (\n acc -> extractLeaf n `consM
 
 toDescList :: Tree -> NonEmpty (Key,Value)
 toDescList = NonEmpty.fromList . LargeArray.foldl (\acc n -> extractLeaf n `consM` acc) [] . asArray
-  where
-    snoc xs mx = maybe xs (:xs) mx
 
+consM       :: Maybe a -> [a] -> [a]
 consM mh tl = maybe tl (:tl) mh
 
+extractLeaf :: FlatNode -> Maybe (Key,Value)
 extractLeaf = \case
   FlatLeaf k v -> Just (k,v)
   _            -> Nothing

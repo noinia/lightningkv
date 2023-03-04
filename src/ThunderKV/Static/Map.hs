@@ -10,15 +10,10 @@ module ThunderKV.Static.Map
 
 import           Control.DeepSeq
 -- import           Control.Monad.Writer
-import           Data.Array (Array)
-import qualified Data.Array as Array
 import           ThunderKV.Static.Types
 import qualified ThunderKV.Static.Prokob as Tree
-import           ThunderKV.Static.Prokob (Tree
-                                         )
-import           Data.List.NonEmpty (NonEmpty(..))
-import qualified Data.List.NonEmpty as NonEmpty
-import           Data.Word
+import           ThunderKV.Static.Prokob (Tree)
+import           Data.List.NonEmpty (NonEmpty)
 import           GHC.Generics (Generic)
 import           Prelude hiding (lookup)
 

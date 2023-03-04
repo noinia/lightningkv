@@ -1,6 +1,7 @@
 
+* TODO fix bu in unpacking the nodeWithMax
 
-* TODO test querying
+* DONE test querying
 
 
 * DONE switch to Storable vectors

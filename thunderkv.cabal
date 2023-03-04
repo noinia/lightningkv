@@ -21,6 +21,7 @@ tested-with:
 common setup
     ghc-options: -O2 -Wall -fno-warn-unticked-promoted-constructors -fno-warn-type-defaults
                  -fspecialise-aggressively -fexpose-all-unfoldings
+                 -- -Werror
     default-language: GHC2021
     build-depends:
         base                    >= 4.16.1.0    &&  < 5
