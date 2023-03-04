@@ -181,12 +181,20 @@ cloneSpec = describe "clone based implementation tests" $ do
           tc = structure h
       in divergeAt tc t' == Nothing
 
+    prop "clone same as naive" $ \(Inputs' h xs) ->
+      let t   = fromAscListPow2 xs
+          t'  = toTree h . NonEmpty.fromList $ layout t
+          tc  = fromDescListPow2 h (NonEmpty.reverse xs)
+      in t' == tc
+
     -- this one still fails, but that is ok for now
     xprop "reconstruct" $ \(Inputs' h xs) ->
       let t  = fromAscListPow2 xs
           t' = asBinTree $ structure h
       in t == t'
 
+filled      :: Height -> NonEmpty.NonEmpty (Key,Value) -> Tree
+filled h xs = fillDesc (reverse $ F.toList xs) $ structure h
 
 testFH   :: Height -> Tree
 testFH h = toTree h . NonEmpty.fromList . layout $ testH h

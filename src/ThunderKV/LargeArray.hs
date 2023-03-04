@@ -3,8 +3,11 @@ module ThunderKV.LargeArray
   , fromListN
   , (!)
   , toList
-  , imapAccumL
+  , imapAccumL, unsafeImapAccumL
+  , imapAccumR, unsafeImapAccumR
   , length
+  , mapR
+  , indicesLR, indicesRL
 
   , MLargeArray
   , unsafeNew
@@ -17,6 +20,7 @@ module ThunderKV.LargeArray
   ) where
 
 import           Control.DeepSeq
+import           Control.Monad
 import           Control.Monad.Primitive
 import           Control.Monad.ST
 import           Control.Monad.Trans.Class (lift)
@@ -52,9 +56,12 @@ toList :: Storable a => LargeArray a -> [a]
 toList = Vector.toList . toVector
 
 
+-- | Get the length of a large array
+length :: Storable a => LargeArray a -> Index
+length = Vector.length . toVector
 
-data WithIndex a = WithIndex {-# UNPACK #-}!Index a
 
+--------------------------------------------------------------------------------
 
 -- | Map over the Array from left to right, while maintaining
 -- accumulating some state of type a. Overwrites the array.
@@ -89,10 +96,68 @@ buildL readArr f acc0 mArr =
             write mArr i c
             put $ WithIndex (succ i) acc'
 
+data WithIndex a = WithIndex {-# UNPACK #-}!Index a
 
--- | Get the length of a large array
-length :: Storable a => LargeArray a -> Index
-length = Vector.length . toVector
+
+----------------------------------------
+
+-- | map, going from right to left
+mapR       :: ( Storable a
+              , Storable b
+              ) => (a -> b) -> LargeArray a -> LargeArray b
+mapR f arr = runST $ do mArr <- unsafeNew (length arr)
+                        forM_ (indicesRL arr) $ \i ->
+                          write mArr i (f $ arr ! i)
+                        unsafeFreeze mArr
+
+indicesLR arr = case length arr of
+                  0 -> []
+                  n -> [0..n-1]
+
+indicesRL arr = case length arr of
+                  0 -> []
+                  n -> tail $ [n,n-1..0]
+
+
+-- | Map over the Array from right to left, while maintaining
+-- accumulating some state of type a. Overwrites the array.
+unsafeImapAccumR            :: forall a b. (Storable b)
+                            => (Index -> a -> b -> (a,b)) -> a -> LargeArray b -> (a, LargeArray b)
+unsafeImapAccumR f acc0 arr = runST $ do mArr <- unsafeThaw arr
+                                         buildR (read mArr) f acc0 mArr
+
+
+-- | Map over the Array from right to left, while maintaining
+-- accumulating some state of type a.
+imapAccumR            :: (Storable b, Storable c)
+                      => (Index -> a -> b -> (a,c)) -> a -> LargeArray b -> (a, LargeArray c)
+imapAccumR f acc0 arr = runST $ do mArr <- unsafeNew (length arr)
+                                   buildR (\i -> pure $ arr ! i) f acc0 mArr
+
+-- | implementation of imapAccumR
+buildR                     :: forall a b c s. (Storable b, Storable c)
+                           => (Index -> ST s b)
+                           -> (Index -> a -> b -> (a,c))
+                           -> a
+                           -> MLargeArray s c
+                           -> ST s (a, LargeArray c)
+buildR readArr f acc0 mArr =
+    do WithIndex _ acc' <- execStateT go $ WithIndex n acc0
+       arr' <- unsafeFreeze mArr
+       pure (acc',arr')
+  where
+    n = length' mArr
+
+    go :: StateT (WithIndex a) (ST s) ()
+    go = do WithIndex i acc <- get
+            b <- lift $ readArr i
+            let (acc',c) = f i acc b
+            write mArr i c
+            put $ WithIndex (pred i) acc'
+
+-- | get the length of a mutable large array
+length' :: Storable a => MLargeArray s a -> Index
+length' = MVector.length . toMVector
 
 --------------------------------------------------------------------------------
 

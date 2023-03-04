@@ -99,5 +99,6 @@ test-suite thunderkv-hspec
     other-modules:
         Spec
         ProkobSpec
+        ArraySpec
     build-depends:
         thunderkv

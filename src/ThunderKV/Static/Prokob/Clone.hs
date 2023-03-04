@@ -1,5 +1,6 @@
 module ThunderKV.Static.Prokob.Clone
-  ( structure
+  ( fromDescListPow2
+  , structure
   , templates
   , templates'
 
@@ -12,6 +13,7 @@ module ThunderKV.Static.Prokob.Clone
   ) where
 
 import qualified Data.Array as Array
+import qualified Data.Foldable as F
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Semigroup.Foldable
@@ -21,14 +23,16 @@ import           ThunderKV.Static.Types
 
 --------------------------------------------------------------------------------
 
+-- | Given a height h, and a non-empty list of 2^h elements in
+-- decreasing order, builds the tree.
+fromDescListPow2      :: Height -> NonEmpty.NonEmpty (Key,Value) -> Tree
+fromDescListPow2 h xs = fillDesc (F.toList xs) $ structure h
+
 -- | Creates the structure of a tree
 structure   :: Height -> Tree
 structure h = fromNonEmpty h $ arr Array.! h
   where
     arr = templates' (h `max` 2)
-
--- fromAscList :: [(Key,Value)] -> Tree
--- fromAscList =
 
 -- type Templates = Array.Array Height Tree
 
